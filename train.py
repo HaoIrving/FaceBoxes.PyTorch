@@ -34,8 +34,11 @@ if not os.path.exists(args.save_folder):
 img_dim = 1024 # only 1024 is supported
 rgb_mean = (98.13131, 98.13131, 98.13131) # bgr order
 num_classes = 2
-num_gpu = args.ngpu
-num_workers = args.num_workers
+# num_gpu = args.ngpu
+num_gpu = 1
+# num_workers = args.num_workers
+num_workers = 0
+
 batch_size = args.batch_size
 momentum = args.momentum
 weight_decay = args.weight_decay

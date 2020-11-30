@@ -43,7 +43,9 @@ class AnnotationTransform(object):
         """
         res = np.empty((0, 5))
         for obj in target.iter('object'):
-            difficult = int(obj.find('difficult').text) == 1
+            difficult = False
+            if obj.find('difficult'):
+                difficult = int(obj.find('difficult').text) == 1
             if not self.keep_difficult and difficult:
                 continue
             name = obj.find('name').text.lower().strip()
@@ -85,10 +87,18 @@ class VOCDetection(data.Dataset):
 
     def __getitem__(self, index):
         img_id = self.ids[index]
-        target = ET.parse(self._annopath % (img_id + '.xml')).getroot()
-        img = cv2.imread(self._imgpath % (img_id + '.tiff'), -1)
+        target = ET.parse(self._annopath % (img_id[0] + '.xml')).getroot()
+        img = cv2.imread(self._imgpath % (img_id[0] + '.tiff'), -1)
+
+        pixel_max = img.max()
+        # pixel_min = img.min()
+        k = pixel_max ** (1 / 255)
+        img = np.clip(img, 1, None)
+        img = np.log(img) / np.log(k)
+
         img = img[:, :, np.newaxis]
         img = np.concatenate((img, img, img), axis=2)
+
         height, width, _ = img.shape
 
         if self.target_transform is not None:
