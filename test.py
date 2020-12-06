@@ -115,11 +115,12 @@ if __name__ == '__main__':
 
     # coco eval 
     dataset_name = 'dummy_dataset'
-    DatasetCatalog.register(dataset_name, lambda: load_sar_ship_instances(testset_folder, ['ship',]))
+    DatasetCatalog.register(dataset_name, lambda: load_sar_ship_instances('data/SAR_SHIP_test', ['ship',]))
     MetadataCatalog.get(dataset_name).set(thing_classes=['ship',])
     evaluator = COCOEvaluator(dataset_name, output_dir=args.save_folder)
+    evaluator.reset()
     
-    dataset_dicts = load_sar_ship_instances(testset_folder, ['ship',])
+    dataset_dicts = load_sar_ship_instances('data/SAR_SHIP_test', ['ship',])
     sar_metadata = MetadataCatalog.get("dummy_dataset")
 
     # testing begin
@@ -216,7 +217,7 @@ if __name__ == '__main__':
         classes = torch.tensor(classes, dtype=torch.int64)
         outputs.pred_classes = classes
         outputs.scores = torch.tensor(dets[:, 4])
-        evaluator.process(inputs, outputs)
+        evaluator.process([inputs], [{'instances': outputs}])
 
         # show image
         if args.show_image:
@@ -246,4 +247,4 @@ if __name__ == '__main__':
         print("copypaste: Task: {}".format(task))
         print("copypaste: " + ",".join([k[0] for k in important_res]))
         print("copypaste: " + ",".join(["{0:.4f}".format(k[1]) for k in important_res]))
-    print("AP50: {}, FPS:{}".format(results['bbox']['AP50'], 1 / _t['forward_pass'].average_time))
+    print("AP50: {}, FPS: {}".format(results['bbox']['AP50'], 1 / _t['forward_pass'].average_time))
