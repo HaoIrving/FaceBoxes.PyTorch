@@ -1,0 +1,6 @@
+Intel® Core™ i7-9700F CPU @ 3.00GHz × 8
+GeForce GTX 1660 Ti
+
+68.6983
+196
+16

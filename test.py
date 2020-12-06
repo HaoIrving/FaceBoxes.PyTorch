@@ -13,13 +13,21 @@ from models.faceboxes import FaceBoxes
 from utils.box_utils import decode
 from utils.timer import Timer
 
+from data import load_sar_ship_instances
+from detectron2.data import DatasetCatalog, MetadataCatalog
+from detectron2.structures import (Boxes, Instances)
+from detectron2.evaluation import COCOEvaluator
+
+from detectron2.utils.visualizer import Visualizer
+
+
 parser = argparse.ArgumentParser(description='FaceBoxes')
 
-parser.add_argument('-m', '--trained_model', default='weights/FaceBoxes.pth',
+parser.add_argument('-m', '--trained_model', default='weights/Final_FaceBoxes.pth',
                     type=str, help='Trained state_dict file path to open')
 parser.add_argument('--save_folder', default='eval/', type=str, help='Dir to save results')
 parser.add_argument('--cpu', action="store_true", default=False, help='Use cpu inference')
-parser.add_argument('--dataset', default='PASCAL', type=str, choices=['AFW', 'PASCAL', 'FDDB'], help='dataset')
+parser.add_argument('--dataset', default='SAR_SHIP_test', type=str, choices=['AFW', 'PASCAL', 'FDDB', 'SAR_SHIP_test'], help='dataset')
 parser.add_argument('--confidence_threshold', default=0.05, type=float, help='confidence_threshold')
 parser.add_argument('--top_k', default=5000, type=int, help='top_k')
 parser.add_argument('--nms_threshold', default=0.3, type=float, help='nms_threshold')
@@ -66,6 +74,9 @@ def load_model(model, pretrained_path, load_to_cpu):
 
 
 if __name__ == '__main__':
+    # args.cpu = True
+    # args.show_image = True
+
     torch.set_grad_enabled(False)
     # net and model
     net = FaceBoxes(phase='test', size=None, num_classes=2)    # initialize detector
@@ -97,19 +108,43 @@ if __name__ == '__main__':
         resize = 2.5
     elif args.dataset == "AFW":
         resize = 1
+    elif args.dataset == "SAR_SHIP_test":
+        resize = 1.9
 
     _t = {'forward_pass': Timer(), 'misc': Timer()}
 
+    # coco eval 
+    dataset_name = 'dummy_dataset'
+    DatasetCatalog.register(dataset_name, lambda: load_sar_ship_instances(testset_folder, ['ship',]))
+    MetadataCatalog.get(dataset_name).set(thing_classes=['ship',])
+    evaluator = COCOEvaluator(dataset_name, output_dir=args.save_folder)
+    
+    dataset_dicts = load_sar_ship_instances(testset_folder, ['ship',])
+    sar_metadata = MetadataCatalog.get("dummy_dataset")
+
     # testing begin
-    for i, img_name in enumerate(test_dataset):
-        image_path = testset_folder + img_name + '.jpg'
-        img_raw = cv2.imread(image_path, cv2.IMREAD_COLOR)
+    for i, d in enumerate(dataset_dicts):
+        img_name = d['image_id']
+        image_path = testset_folder + img_name + '.tiff'
+        img_raw = cv2.imread(image_path, -1)
+        
+        pixel_max = img_raw.max()
+        # # pixel_min = img.min()
+        k = pixel_max ** (1 / 255)
+        img_raw = np.clip(img_raw, 1, None)
+        img_raw = np.log(img_raw) / np.log(k)
+
+        img_raw = img_raw[:, :, np.newaxis]
+        img_raw = np.concatenate((img_raw, img_raw, img_raw), axis=2)
+
+        img_draw = img_raw.astype(np.uint8)
         img = np.float32(img_raw)
+
         if resize != 1:
             img = cv2.resize(img, None, None, fx=resize, fy=resize, interpolation=cv2.INTER_LINEAR)
         im_height, im_width, _ = img.shape
         scale = torch.Tensor([img.shape[1], img.shape[0], img.shape[1], img.shape[0]])
-        img -= (104, 117, 123)
+        img -= (98.13131, 98.13131, 98.13131)
         img = img.transpose(2, 0, 1)
         img = torch.from_numpy(img).unsqueeze(0)
         img = img.to(device)
@@ -172,19 +207,43 @@ if __name__ == '__main__':
                 fw.write('{:s} {:.3f} {:.1f} {:.1f} {:.1f} {:.1f}\n'.format(img_name, score, xmin, ymin, xmax, ymax))
         print('im_detect: {:d}/{:d} forward_pass_time: {:.4f}s misc: {:.4f}s'.format(i + 1, num_images, _t['forward_pass'].average_time, _t['misc'].average_time))
 
+        # coco eval 
+        inputs = {"image_id": img_name}
+        h, w, _ = img_raw.shape
+        outputs = Instances((h, w))
+        outputs.pred_boxes = Boxes(dets[:, :4])
+        classes = [0 for _ in dets]
+        classes = torch.tensor(classes, dtype=torch.int64)
+        outputs.pred_classes = classes
+        outputs.scores = torch.tensor(dets[:, 4])
+        evaluator.process(inputs, outputs)
+
         # show image
         if args.show_image:
+            visualizer = Visualizer(img_draw, metadata=sar_metadata, scale=1)
+            out = visualizer.draw_dataset_dict(d)
+            img_gt = out.get_image()
             for b in dets:
                 if b[4] < args.vis_thres:
                     continue
                 text = "{:.4f}".format(b[4])
                 b = list(map(int, b))
-                cv2.rectangle(img_raw, (b[0], b[1]), (b[2], b[3]), (0, 0, 255), 2)
+                cv2.rectangle(img_gt, (b[0], b[1]), (b[2], b[3]), (0, 0, 255), 2)
                 cx = b[0]
                 cy = b[1] + 12
-                cv2.putText(img_raw, text, (cx, cy),
+                cv2.putText(img_gt, text, (cx, cy),
                             cv2.FONT_HERSHEY_DUPLEX, 0.5, (255, 255, 255))
-            cv2.imshow('res', img_raw)
+            cv2.imshow('res', img_gt)
             cv2.waitKey(0)
 
     fw.close()
+
+    # coc0 eval
+    results = evaluator.evaluate()
+    for task, res in results.items():
+        # Don't print "AP-category" metrics since they are usually not tracked.
+        important_res = [(k, v) for k, v in res.items() if "-" not in k]
+        print("copypaste: Task: {}".format(task))
+        print("copypaste: " + ",".join([k[0] for k in important_res]))
+        print("copypaste: " + ",".join(["{0:.4f}".format(k[1]) for k in important_res]))
+    print("AP50: {}, FPS:{}".format(results['bbox']['AP50'], 1 / _t['forward_pass'].average_time))
