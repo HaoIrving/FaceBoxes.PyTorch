@@ -1,3 +1,6 @@
 weights
 utils
 *.pyc
+eval
+data/SAR_SHIP_train
+data/SAR_SHIP_test
