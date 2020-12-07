@@ -97,8 +97,8 @@ if __name__ == '__main__':
     fw = open(os.path.join(args.save_folder, args.dataset + '_dets.txt'), 'w')
 
     # testing dataset
-    testset_folder = os.path.join('data', args.dataset, 'images/')
-    testset_list = os.path.join('data', args.dataset, 'img_list.txt')
+    testset_folder = os.path.join('data', 'SAR_SHIP', args.dataset, 'images/')
+    testset_list = os.path.join('data', 'SAR_SHIP', args.dataset, 'img_list.txt')
     with open(testset_list, 'r') as fr:
         test_dataset = fr.read().split()
     num_images = len(test_dataset)
@@ -117,12 +117,12 @@ if __name__ == '__main__':
 
     # coco eval 
     dataset_name = 'dummy_dataset'
-    DatasetCatalog.register(dataset_name, lambda: load_sar_ship_instances('data/SAR_SHIP_test', ['ship',]))
+    DatasetCatalog.register(dataset_name, lambda: load_sar_ship_instances('data/SAR_SHIP/SAR_SHIP_test', ['ship',]))
     MetadataCatalog.get(dataset_name).set(thing_classes=['ship',])
     evaluator = COCOEvaluator(dataset_name, output_dir=args.save_folder)
     evaluator.reset()
     
-    dataset_dicts = load_sar_ship_instances('data/SAR_SHIP_test', ['ship',])
+    dataset_dicts = load_sar_ship_instances('data/SAR_SHIP/SAR_SHIP_test', ['ship',])
     sar_metadata = MetadataCatalog.get("dummy_dataset")
 
     # testing begin
