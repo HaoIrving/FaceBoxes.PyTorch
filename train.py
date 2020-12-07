@@ -38,7 +38,7 @@ num_classes = 2
 num_gpu = args.ngpu
 num_workers = args.num_workers
 
-num_gpu = 1
+# num_gpu = 1
 # num_workers = 0
 
 batch_size = args.batch_size
