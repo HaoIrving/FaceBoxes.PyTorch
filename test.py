@@ -5,11 +5,11 @@ import torch
 import torch.backends.cudnn as cudnn
 import numpy as np
 from data import cfg
-from layers.functions.prior_box import PriorBox
+from layers.functions.prior_box import PriorBox, PriorBox_sar
 from utils.nms_wrapper import nms
 #from utils.nms.py_cpu_nms import py_cpu_nms
 import cv2
-from models.faceboxes import FaceBoxes
+from models.faceboxes import FaceBoxes, FaceBoxes_sar
 from utils.box_utils import decode
 from utils.timer import Timer
 
@@ -23,7 +23,7 @@ from detectron2.utils.visualizer import Visualizer
 
 parser = argparse.ArgumentParser(description='FaceBoxes')
 
-parser.add_argument('-m', '--trained_model', default='weights/Final_FaceBoxes.pth',
+parser.add_argument('-m', '--trained_model', default='weights/71.3/Final_FaceBoxes.pth',
                     type=str, help='Trained state_dict file path to open')
 parser.add_argument('--save_folder', default='eval/', type=str, help='Dir to save results')
 parser.add_argument('--cpu', action="store_true", default=False, help='Use cpu inference')
@@ -75,11 +75,13 @@ def load_model(model, pretrained_path, load_to_cpu):
 
 if __name__ == '__main__':
     # args.cpu = True
-    # args.show_image = True
+    args.show_image = True
+    # args.trained_model = 'weights/71.3/FaceBoxes_epoch_295.pth'
 
     torch.set_grad_enabled(False)
     # net and model
-    net = FaceBoxes(phase='test', size=None, num_classes=2)    # initialize detector
+    # net = FaceBoxes(phase='test', size=None, num_classes=2)    # initialize detector
+    net = FaceBoxes_sar(phase='test', size=None, num_classes=2) 
     net = load_model(net, args.trained_model, args.cpu)
     net.eval()
     print('Finished loading model!')
@@ -155,7 +157,8 @@ if __name__ == '__main__':
         loc, conf = net(img)  # forward pass
         _t['forward_pass'].toc()
         _t['misc'].tic()
-        priorbox = PriorBox(cfg, image_size=(im_height, im_width))
+        # priorbox = PriorBox(cfg, image_size=(im_height, im_width))
+        priorbox = PriorBox_sar(cfg, image_size=(im_height, im_width))
         priors = priorbox.forward()
         priors = priors.to(device)
         prior_data = priors.data

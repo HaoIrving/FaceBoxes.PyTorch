@@ -15,7 +15,7 @@ def _crop(image, boxes, labels, img_dim):
             scale = random.uniform(0.3, 1.)
         short_side = min(width, height)
         w = int(scale * short_side)
-        h = w
+        h = w  # crop a squre roi
 
         if width == w:
             l = 0
@@ -27,7 +27,7 @@ def _crop(image, boxes, labels, img_dim):
             t = random.randrange(height - h)
         roi = np.array((l, t, l + w, t + h))
 
-        value = matrix_iof(boxes, roi[np.newaxis])
+        value = matrix_iof(boxes, roi[np.newaxis])  # roi need to contain at least one entire box
         flag = (value >= 1)
         if not flag.any():
             continue
@@ -50,7 +50,7 @@ def _crop(image, boxes, labels, img_dim):
 	# make sure that the cropped image contains at least one face > 16 pixel at training image scale
         b_w_t = (boxes_t[:, 2] - boxes_t[:, 0] + 1) / w * img_dim
         b_h_t = (boxes_t[:, 3] - boxes_t[:, 1] + 1) / h * img_dim
-        mask_b = np.minimum(b_w_t, b_h_t) > 16.0
+        mask_b = np.minimum(b_w_t, b_h_t) >= 10.0
         boxes_t = boxes_t[mask_b]
         labels_t = labels_t[mask_b]
 

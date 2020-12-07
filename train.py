@@ -7,11 +7,11 @@ import argparse
 import torch.utils.data as data
 from data import AnnotationTransform, VOCDetection, detection_collate, preproc, cfg
 from layers.modules import MultiBoxLoss
-from layers.functions.prior_box import PriorBox
+from layers.functions.prior_box import PriorBox, PriorBox_sar
 import time
 import datetime
 import math
-from models.faceboxes import FaceBoxes
+from models.faceboxes import FaceBoxes, FaceBoxes_sar
 
 parser = argparse.ArgumentParser(description='FaceBoxes Training')
 parser.add_argument('--training_dataset', default='./data/SAR_SHIP_train', help='Training dataset directory')
@@ -51,7 +51,8 @@ training_dataset = args.training_dataset
 save_folder = args.save_folder
 gpu_train = cfg['gpu_train']
 
-net = FaceBoxes('train', img_dim, num_classes)
+# net = FaceBoxes('train', img_dim, num_classes)
+net = FaceBoxes_sar('train', img_dim, num_classes)
 print("Printing net...")
 print(net)
 
@@ -80,7 +81,9 @@ net = net.to(device)
 optimizer = optim.SGD(net.parameters(), lr=initial_lr, momentum=momentum, weight_decay=weight_decay)
 criterion = MultiBoxLoss(num_classes, 0.35, True, 0, True, 7, 0.35, False)
 
-priorbox = PriorBox(cfg, image_size=(img_dim, img_dim))
+# priorbox = PriorBox(cfg, image_size=(img_dim, img_dim))
+priorbox = PriorBox_sar(cfg, image_size=(img_dim, img_dim))
+
 with torch.no_grad():
     priors = priorbox.forward()
     priors = priors.to(device)

@@ -1,6 +1,10 @@
 Intel® Core™ i7-9700F CPU @ 3.00GHz × 8
 GeForce GTX 1660 Ti
 
+# box edge in roi > 16
 68.6983
 196
 16
+
+# box edge in roi > 0
+AP50: 71.32391880825108, FPS: 122.0316633616368
