@@ -14,7 +14,7 @@ from typing import List, Tuple, Union
 # from detectron2.structures import BoxMode
 # from detectron2.utils.file_io import PathManager
 
-# SAR_CLASSES = ( '__background__', 'ship')
+SAR_CLASSES = ( '__background__', 'ship')
 
 
 # def load_sar_ship_instances(dirname: str, class_names: Union[List[str], Tuple[str, ...]], fileids=None):
