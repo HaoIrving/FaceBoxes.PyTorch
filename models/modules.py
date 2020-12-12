@@ -30,8 +30,8 @@ class GroupNormConv2d(nn.Module):
 
 class Inception_GroupNorm(nn.Module):
 
-  def __init__(self):
-    super(Inception_GroupNorm, self).__init__(in_channels=128)
+  def __init__(self, in_channels=128):
+    super(Inception_GroupNorm, self).__init__()
     self.branch1x1 = GroupNormConv2d(in_channels, 64, kernel_size=1, padding=0)
     self.branch1x1_2 = GroupNormConv2d(in_channels, 64, kernel_size=1, padding=0)
     self.branch3x3_reduce = GroupNormConv2d(in_channels, 24, kernel_size=1, padding=0)
