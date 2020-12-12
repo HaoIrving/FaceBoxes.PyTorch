@@ -72,11 +72,11 @@ class FaceBoxes_sar(nn.Module):
     self.conv1 = CRelu_GroupNorm(3, 24, kernel_size=3, stride=2, padding=1)
     self.conv2 = CRelu_GroupNorm(48, 64, kernel_size=1, stride=1, padding=0)
 
-    self.inception1 = Inception_GroupNorm(in_channels=128)
-    self.inception2 = Inception_GroupNorm(in_channels=256)
-    self.inception3 = Inception_GroupNorm(in_channels=256)
+    self.inception1 = Inception_GroupNorm(128)
+    self.inception2 = Inception_GroupNorm(256)
+    self.inception3 = Inception_GroupNorm(256)
 
-    self.conv3_1 = GroupNormConv2d(128, 128, kernel_size=3, stride=1, padding=2, dilation=2)  # dilation
+    self.conv3_1 = GroupNormConv2d(256, 128, kernel_size=3, stride=1, padding=2, dilation=2)  # dilation
     self.conv3_2 = GroupNormConv2d(128, 256, kernel_size=1, stride=1, padding=0)
 
     self.conv4_1 = GroupNormConv2d(256, 128, kernel_size=1, stride=1, padding=0)
