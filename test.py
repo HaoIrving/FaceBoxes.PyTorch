@@ -23,7 +23,7 @@ from detectron2.utils.visualizer import Visualizer
 
 parser = argparse.ArgumentParser(description='FaceBoxes')
 
-parser.add_argument('-m', '--trained_model', default='weights/71.3/Final_FaceBoxes.pth',
+parser.add_argument('-m', '--trained_model', default='weights/Final_FaceBoxes.pth',
                     type=str, help='Trained state_dict file path to open')
 parser.add_argument('--save_folder', default='eval/', type=str, help='Dir to save results')
 parser.add_argument('--cpu', action="store_true", default=False, help='Use cpu inference')
@@ -75,13 +75,13 @@ def load_model(model, pretrained_path, load_to_cpu):
 
 if __name__ == '__main__':
     # args.cpu = True
-    args.show_image = True
-    # args.trained_model = 'weights/71.3/FaceBoxes_epoch_295.pth'
+    # args.show_image = True
+    args.trained_model = 'weights/71.3/Final_FaceBoxes.pth'
 
     torch.set_grad_enabled(False)
     # net and model
-    # net = FaceBoxes(phase='test', size=None, num_classes=2)    # initialize detector
-    net = FaceBoxes_sar(phase='test', size=None, num_classes=2) 
+    net = FaceBoxes(phase='test', size=None, num_classes=2)    # initialize detector
+    # net = FaceBoxes_sar(phase='test', size=None, num_classes=2) 
     net = load_model(net, args.trained_model, args.cpu)
     net.eval()
     print('Finished loading model!')

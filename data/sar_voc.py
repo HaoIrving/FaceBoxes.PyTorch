@@ -155,7 +155,7 @@ class VOCDetection(data.Dataset):
         img = img[:, :, np.newaxis]
         img = np.concatenate((img, img, img), axis=2)
 
-        height, width, _ = img.shape
+        # height, width, _ = img.shape
 
         if self.target_transform is not None:
             target = self.target_transform(target)

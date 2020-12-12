@@ -4,9 +4,38 @@ import numpy as np
 from math import ceil
 from math import sqrt
 
+
 class PriorBox_sar(object):
     def __init__(self, cfg, image_size=None, phase='train'):
         super(PriorBox_sar, self).__init__()
+        self.aspect_ratios = cfg['aspect_ratios']  # [[0.5, 2], [0.5, 2], [0.5, 2], [0.5, 2]]
+        self.min_sizes = cfg['min_sizes']  # [[8, 16], [32, 64, 128], [256], [512]]
+        self.steps = cfg['steps']  # [16, 32, 64, 128]
+        self.clip = cfg['clip']  # False
+        self.image_size = image_size
+        self.feature_maps = [[ceil(self.image_size[0]/step), ceil(self.image_size[1]/step)] for step in self.steps]
+
+    def forward(self):
+        anchors = []
+        for k, f in enumerate(self.feature_maps):
+            min_sizes = self.min_sizes[k]
+            for i, j in product(range(f[0]), range(f[1])):
+                for min_size in min_sizes:
+                    s_kx = min_size / self.image_size[1]
+                    s_ky = min_size / self.image_size[0]
+                    cx = (j + 0.5) * self.steps[k] / self.image_size[1]
+                    cy = (i + 0.5) * self.steps[k] / self.image_size[0]
+                    for ar in self.aspect_ratios[k]:
+                        anchors += [cx, cy, s_kx*sqrt(ar), s_ky/sqrt(ar)]
+        # back to torch land
+        output = torch.Tensor(anchors).view(-1, 4)
+        if self.clip:
+            output.clamp_(max=1, min=0)
+        return output
+
+class PriorBox_sar_old(object):
+    def __init__(self, cfg, image_size=None, phase='train'):
+        super(PriorBox_sar_old, self).__init__()
         self.aspect_ratios = cfg['aspect_ratios']  # [[0.5, 2], [0.5, 2], [0.5, 2], [0.5, 2]]
         self.min_sizes = cfg['min_sizes']  # [[8, 16], [32, 64, 128], [256], [512]]
         self.steps = cfg['steps']  # [16, 32, 64, 128]
@@ -94,7 +123,7 @@ class PriorBox_ssd(object):
     # Compute priorbox coordinates in center-offset form for each source
     # feature map.
     def __init__(self, cfg):
-        super(PriorBox, self).__init__()
+        super(PriorBox_ssd, self).__init__()
         self.image_size = cfg['min_dim']
         # number of priors for feature map location (either 4 or 6)
         self.num_priors = len(cfg['aspect_ratios'])

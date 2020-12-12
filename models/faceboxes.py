@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from .modules import *
 
 class BasicConv2d(nn.Module):
 
@@ -68,19 +69,26 @@ class FaceBoxes_sar(nn.Module):
     self.num_classes = num_classes
     self.size = size
 
-    self.conv1 = CRelu(3, 24, kernel_size=7, stride=4, padding=3)
-    self.conv2 = CRelu(48, 64, kernel_size=5, stride=2, padding=2)
+    self.conv1 = CRelu_GroupNorm(3, 24, kernel_size=3, stride=2, padding=1)
+    self.conv2 = CRelu_GroupNorm(48, 64, kernel_size=1, stride=1, padding=0)
 
-    self.inception1 = Inception()
-    self.inception2 = Inception()
-    self.inception3 = Inception()
+    self.inception1 = Inception_GroupNorm(in_channels=128)
+    self.inception2 = Inception_GroupNorm(in_channels=256)
+    self.inception3 = Inception_GroupNorm(in_channels=256)
 
-    self.conv3_1 = BasicConv2d(128, 128, kernel_size=1, stride=1, padding=0)
-    self.conv3_2 = BasicConv2d(128, 256, kernel_size=3, stride=2, padding=1)
+    self.conv3_1 = GroupNormConv2d(128, 128, kernel_size=3, stride=1, padding=2, dilation=2)  # dilation
+    self.conv3_2 = GroupNormConv2d(128, 256, kernel_size=1, stride=1, padding=0)
 
-    self.conv4_1 = BasicConv2d(256, 128, kernel_size=1, stride=1, padding=0)
-    self.conv4_2 = BasicConv2d(128, 256, kernel_size=3, stride=2, padding=1)
+    self.conv4_1 = GroupNormConv2d(256, 128, kernel_size=1, stride=1, padding=0)
+    self.conv4_2 = GroupNormConv2d(128, 256, kernel_size=3, stride=2, padding=1)
 
+    self.conv5_1 = GroupNormConv2d(256, 128, kernel_size=1, stride=1, padding=0)
+    self.conv5_2 = GroupNormConv2d(128, 256, kernel_size=3, stride=2, padding=1)
+
+    self.conv6_1 = GroupNormConv2d(256, 128, kernel_size=1, stride=1, padding=0)
+    self.conv6_2 = GroupNormConv2d(128, 256, kernel_size=3, stride=2, padding=1)
+    
+    self.rfe = RFE(256, 256)
     self.loc, self.conf = self.multibox(self.num_classes)
 
     if self.phase == 'test':
@@ -101,14 +109,21 @@ class FaceBoxes_sar(nn.Module):
   def multibox(self, num_classes):
     loc_layers = []
     conf_layers = []
-    loc_layers += [nn.Conv2d(128, 3 * 80 * 4, kernel_size=3, padding=1)]
-    conf_layers += [nn.Conv2d(128, 3 * 80 * num_classes, kernel_size=3, padding=1)]
-    loc_layers += [nn.Conv2d(128, 3 * 21 * 4, kernel_size=3, padding=1)]
-    conf_layers += [nn.Conv2d(128, 3 * 21 * num_classes, kernel_size=3, padding=1)]
-    loc_layers += [nn.Conv2d(256, 3 * 1 * 4, kernel_size=3, padding=1)]
-    conf_layers += [nn.Conv2d(256, 3 * 1 * num_classes, kernel_size=3, padding=1)]
-    loc_layers += [nn.Conv2d(256, 3 * 1 * 4, kernel_size=3, padding=1)]
-    conf_layers += [nn.Conv2d(256, 3 * 1 * num_classes, kernel_size=3, padding=1)]
+    loc_layers += [nn.Conv2d(256, 3 * 4, kernel_size=3, padding=1)]
+    conf_layers += [nn.Conv2d(256, 3 * num_classes, kernel_size=3, padding=1)]
+    loc_layers += [nn.Conv2d(256, 3 * 4, kernel_size=3, padding=1)]
+    conf_layers += [nn.Conv2d(256, 3 * num_classes, kernel_size=3, padding=1)]
+    loc_layers += [nn.Conv2d(256, 3 * 4, kernel_size=3, padding=1)]
+    conf_layers += [nn.Conv2d(256, 3 * num_classes, kernel_size=3, padding=1)]
+    loc_layers += [nn.Conv2d(256, 3 * 4, kernel_size=3, padding=1)]
+    conf_layers += [nn.Conv2d(256, 3 * num_classes, kernel_size=3, padding=1)]
+    loc_layers += [nn.Conv2d(256, 3 * 4, kernel_size=3, padding=1)]
+    conf_layers += [nn.Conv2d(256, 3 * num_classes, kernel_size=3, padding=1)]
+    loc_layers += [nn.Conv2d(256, 3 * 4, kernel_size=3, padding=1)]
+    conf_layers += [nn.Conv2d(256, 3 * num_classes, kernel_size=3, padding=1)]
+    loc_layers += [nn.Conv2d(256, 3 * 4, kernel_size=3, padding=1)]
+    conf_layers += [nn.Conv2d(256, 3 * num_classes, kernel_size=3, padding=1)]
+
     return nn.Sequential(*loc_layers), nn.Sequential(*conf_layers)
 
   def forward(self, x):
@@ -118,15 +133,23 @@ class FaceBoxes_sar(nn.Module):
     conf = list()
 
     x = self.conv1(x)
-    x = F.max_pool2d(x, kernel_size=3, stride=2, padding=1)
     x = self.conv2(x)
+    x = F.max_pool2d(x, kernel_size=3, stride=2, padding=1)
+
+    x = self.inception1(x)
     detection_sources.append(x)
 
     x = F.max_pool2d(x, kernel_size=3, stride=2, padding=1)
-    x = self.inception1(x)
+
     x = self.inception2(x)
+    detection_sources.append(x)
+
+    x = F.max_pool2d(x, kernel_size=3, stride=2, padding=1)
+
     x = self.inception3(x)
     detection_sources.append(x)
+
+    x = F.max_pool2d(x, kernel_size=3, stride=2, padding=1)
 
     x = self.conv3_1(x)
     x = self.conv3_2(x)
@@ -136,9 +159,17 @@ class FaceBoxes_sar(nn.Module):
     x = self.conv4_2(x)
     detection_sources.append(x)
 
+    x = self.conv5_1(x)
+    x = self.conv5_2(x)
+    detection_sources.append(x)
+
+    x = self.conv6_1(x)
+    x = self.conv6_2(x)
+    detection_sources.append(x)
+    
     for (x, l, c) in zip(detection_sources, self.loc, self.conf):
-        loc.append(l(x).permute(0, 2, 3, 1).contiguous())
-        conf.append(c(x).permute(0, 2, 3, 1).contiguous())
+        loc.append(l(self.rfe(x)).permute(0, 2, 3, 1).contiguous())
+        conf.append(c(self.rfe(x)).permute(0, 2, 3, 1).contiguous())
 
     loc = torch.cat([o.view(o.size(0), -1) for o in loc], 1)
     conf = torch.cat([o.view(o.size(0), -1) for o in conf], 1)
