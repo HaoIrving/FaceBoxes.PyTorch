@@ -45,6 +45,33 @@ class Inception(nn.Module):
     outputs = [branch1x1, branch1x1_2, branch3x3, branch3x3_3]
     return torch.cat(outputs, 1)
 
+class Inception_v2(nn.Module):
+
+  def __init__(self, in_channels=128):
+    super(Inception_v2, self).__init__()
+    self.branch1x1 = BasicConv2d(in_channels, 64, kernel_size=1, padding=0)
+    self.branch1x1_2 = BasicConv2d(in_channels, 64, kernel_size=1, padding=0)
+    self.branch3x3_reduce = BasicConv2d(in_channels, 24, kernel_size=1, padding=0)
+    self.branch3x3 = BasicConv2d(24, 64, kernel_size=3, padding=1)
+    self.branch3x3_reduce_2 = BasicConv2d(in_channels, 24, kernel_size=1, padding=0)
+    self.branch3x3_2 = BasicConv2d(24, 32, kernel_size=3, padding=1)
+    self.branch3x3_3 = BasicConv2d(32, 64, kernel_size=3, padding=1)
+
+  def forward(self, x):
+    branch1x1 = self.branch1x1(x)
+
+    branch1x1_pool = F.avg_pool2d(x, kernel_size=3, stride=1, padding=1)
+    branch1x1_2 = self.branch1x1_2(branch1x1_pool)
+
+    branch3x3_reduce = self.branch3x3_reduce(x)
+    branch3x3 = self.branch3x3(branch3x3_reduce)
+
+    branch3x3_reduce_2 = self.branch3x3_reduce_2(x)
+    branch3x3_2 = self.branch3x3_2(branch3x3_reduce_2)
+    branch3x3_3 = self.branch3x3_3(branch3x3_2)
+
+    outputs = [branch1x1, branch1x1_2, branch3x3, branch3x3_3]
+    return torch.cat(outputs, 1)
 
 class CRelu(nn.Module):
 
@@ -69,24 +96,24 @@ class FaceBoxes_sar(nn.Module):
     self.num_classes = num_classes
     self.size = size
 
-    self.conv1 = CRelu_GroupNorm(3, 24, kernel_size=3, stride=2, padding=1)
-    self.conv2 = CRelu_GroupNorm(48, 64, kernel_size=1, stride=1, padding=0)
+    self.conv1 = CRelu(3, 24, kernel_size=3, stride=2, padding=1)
+    self.conv2 = CRelu(48, 64, kernel_size=1, stride=1, padding=0)
 
-    self.inception1 = Inception_GroupNorm(128)
-    self.inception2 = Inception_GroupNorm(256)
-    self.inception3 = Inception_GroupNorm(256)
+    self.inception1 = Inception_v2(128)
+    self.inception2 = Inception_v2(256)
+    self.inception3 = Inception_v2(256)
 
-    self.conv3_1 = GroupNormConv2d(256, 128, kernel_size=3, stride=1, padding=2, dilation=2)  # dilation
-    self.conv3_2 = GroupNormConv2d(128, 256, kernel_size=1, stride=1, padding=0)
+    self.conv3_1 = BasicConv2d(256, 128, kernel_size=3, stride=1, padding=2, dilation=2)  # dilation
+    self.conv3_2 = BasicConv2d(128, 256, kernel_size=1, stride=1, padding=0)
 
-    self.conv4_1 = GroupNormConv2d(256, 128, kernel_size=1, stride=1, padding=0)
-    self.conv4_2 = GroupNormConv2d(128, 256, kernel_size=3, stride=2, padding=1)
+    self.conv4_1 = BasicConv2d(256, 128, kernel_size=1, stride=1, padding=0)
+    self.conv4_2 = BasicConv2d(128, 256, kernel_size=3, stride=2, padding=1)
 
-    self.conv5_1 = GroupNormConv2d(256, 128, kernel_size=1, stride=1, padding=0)
-    self.conv5_2 = GroupNormConv2d(128, 256, kernel_size=3, stride=2, padding=1)
+    self.conv5_1 = BasicConv2d(256, 128, kernel_size=1, stride=1, padding=0)
+    self.conv5_2 = BasicConv2d(128, 256, kernel_size=3, stride=2, padding=1)
 
-    self.conv6_1 = GroupNormConv2d(256, 128, kernel_size=1, stride=1, padding=0)
-    self.conv6_2 = GroupNormConv2d(128, 256, kernel_size=3, stride=2, padding=1)
+    self.conv6_1 = BasicConv2d(256, 128, kernel_size=1, stride=1, padding=0)
+    self.conv6_2 = BasicConv2d(128, 256, kernel_size=3, stride=2, padding=1)
     
     self.rfe = RFE(256, 256)
     self.loc, self.conf = self.multibox(self.num_classes)
