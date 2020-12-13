@@ -116,7 +116,7 @@ class FaceBoxes_sar(nn.Module):
     self.conv6_2 = BasicConv2d(128, 256, kernel_size=3, stride=2, padding=1)
     
     # self.rfe = RFE(256, 256)
-    self.loc, self.conf = self.multibox(self.num_classes)
+    self.loc, self.conf, self.rfes = self.multibox(self.num_classes)
 
     if self.phase == 'test':
         self.softmax = nn.Softmax(dim=-1)
@@ -136,6 +136,10 @@ class FaceBoxes_sar(nn.Module):
   def multibox(self, num_classes):
     loc_layers = []
     conf_layers = []
+    rfes = []
+    for i in range(7):
+      rfes += [RFE(256, 256)]
+
     loc_layers += [nn.Conv2d(256, 3 * 4, kernel_size=3, padding=1)]
     conf_layers += [nn.Conv2d(256, 3 * num_classes, kernel_size=3, padding=1)]
     loc_layers += [nn.Conv2d(256, 3 * 4, kernel_size=3, padding=1)]
@@ -151,7 +155,7 @@ class FaceBoxes_sar(nn.Module):
     loc_layers += [nn.Conv2d(256, 3 * 4, kernel_size=3, padding=1)]
     conf_layers += [nn.Conv2d(256, 3 * num_classes, kernel_size=3, padding=1)]
 
-    return nn.Sequential(*loc_layers), nn.Sequential(*conf_layers)
+    return nn.Sequential(*loc_layers), nn.Sequential(*conf_layers), nn.Sequential(*rfes)
 
   def forward(self, x):
 
@@ -194,9 +198,13 @@ class FaceBoxes_sar(nn.Module):
     x = self.conv6_2(x)
     detection_sources.append(x)
     
-    for (x, l, c) in zip(detection_sources, self.loc, self.conf):
-        loc.append(l(x).permute(0, 2, 3, 1).contiguous())
-        conf.append(c(x).permute(0, 2, 3, 1).contiguous())
+    for (x, l, c, r) in zip(detection_sources, self.loc, self.conf, self.rfes):
+        loc.append(l(r(x)).permute(0, 2, 3, 1).contiguous())
+        conf.append(c(r(x)).permute(0, 2, 3, 1).contiguous())
+
+    # for (x, l, c) in zip(detection_sources, self.loc, self.conf):
+    #     loc.append(l(x).permute(0, 2, 3, 1).contiguous())
+    #     conf.append(c(x).permute(0, 2, 3, 1).contiguous())
         # loc.append(l(self.rfe(x)).permute(0, 2, 3, 1).contiguous())
         # conf.append(c(self.rfe(x)).permute(0, 2, 3, 1).contiguous())
 
