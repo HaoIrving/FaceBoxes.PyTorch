@@ -96,27 +96,44 @@ class FaceBoxes_sar(nn.Module):
     self.num_classes = num_classes
     self.size = size
 
-    self.conv1 = CRelu(3, 24, kernel_size=3, stride=2, padding=1)
-    self.conv2 = CRelu(48, 64, kernel_size=1, stride=1, padding=0)
+    layers = []
+    layers += [nn.Conv2d(3, 64, kernel_size=3, padding=1)]     # conv1
+    layers += [nn.BatchNorm2d(64), nn.ReLU(inplace=True)]
+    layers += [nn.Conv2d(64, 64, kernel_size=3, padding=1)]
+    layers += [nn.BatchNorm2d(64), nn.ReLU(inplace=True)]
+    layers += [nn.MaxPool2d(kernel_size=2, stride=2)]
 
-    self.inception1 = Inception_v2(128)
+    layers += [nn.Conv2d(64, 128, kernel_size=3, padding=1)]   # conv2
+    layers += [nn.BatchNorm2d(128), nn.ReLU(inplace=True)]
+    layers += [nn.Conv2d(128, 128, kernel_size=3, padding=1)]
+    layers += [nn.BatchNorm2d(128), nn.ReLU(inplace=True)]
+    layers += [nn.MaxPool2d(kernel_size=2, stride=2)]
+
+    layers += [nn.Conv2d(128, 256, kernel_size=3, padding=1)]  # conv3
+    layers += [nn.BatchNorm2d(256), nn.ReLU(inplace=True)]
+    layers += [nn.Conv2d(256, 256, kernel_size=3, padding=1)]
+    layers += [nn.BatchNorm2d(256), nn.ReLU(inplace=True)]
+    layers += [nn.Conv2d(256, 256, kernel_size=3, padding=1)]
+    layers += [nn.BatchNorm2d(256), nn.ReLU(inplace=True)]  # 22
+    layers += [nn.MaxPool2d(kernel_size=2, stride=2, ceil_mode=True)]
+    self.vgg_base = nn.ModuleList(layers)
+    # Layer learns to scale the l2 normalized features from conv3_3
+    self.L2Norm3_3 = L2Norm(256, 10)
+
+    self.inception1 = Inception_v2(256)  # TODO change to 512
     self.inception2 = Inception_v2(256)
-    self.inception3 = Inception_v2(256)
-
-    self.conv3_1 = BasicConv2d(256, 128, kernel_size=3, stride=1, padding=2, dilation=2)  # dilation
-    self.conv3_2 = BasicConv2d(128, 256, kernel_size=1, stride=1, padding=0)
+    # self.inception3 = Inception_v2(256)
 
     self.conv4_1 = BasicConv2d(256, 128, kernel_size=1, stride=1, padding=0)
-    self.conv4_2 = BasicConv2d(128, 256, kernel_size=3, stride=2, padding=1)
+    self.conv4_2 = BasicConv2d(128, 256, kernel_size=3, stride=2, padding=2, dilation=2)  # dilation
 
     self.conv5_1 = BasicConv2d(256, 128, kernel_size=1, stride=1, padding=0)
     self.conv5_2 = BasicConv2d(128, 256, kernel_size=3, stride=2, padding=1)
-
+    
     self.conv6_1 = BasicConv2d(256, 128, kernel_size=1, stride=1, padding=0)
     self.conv6_2 = BasicConv2d(128, 256, kernel_size=3, stride=2, padding=1)
-    
-    # self.rfe = RFE(256, 256)
-    self.loc, self.conf, self.rfes = self.multibox(self.num_classes)
+
+    self.loc, self.conf = self.multibox(self.num_classes)
 
     if self.phase == 'test':
         self.softmax = nn.Softmax(dim=-1)
@@ -136,9 +153,9 @@ class FaceBoxes_sar(nn.Module):
   def multibox(self, num_classes):
     loc_layers = []
     conf_layers = []
-    rfes = []
-    for i in range(7):
-      rfes += [RFE(256, 256)]
+    # rfes = []
+    # for i in range(7):
+    #   rfes += [RFE(256, 256)]
 
     loc_layers += [nn.Conv2d(256, 3 * 4, kernel_size=3, padding=1)]
     conf_layers += [nn.Conv2d(256, 3 * num_classes, kernel_size=3, padding=1)]
@@ -155,7 +172,7 @@ class FaceBoxes_sar(nn.Module):
     loc_layers += [nn.Conv2d(256, 3 * 4, kernel_size=3, padding=1)]
     conf_layers += [nn.Conv2d(256, 3 * num_classes, kernel_size=3, padding=1)]
 
-    return nn.Sequential(*loc_layers), nn.Sequential(*conf_layers), nn.Sequential(*rfes)
+    return nn.Sequential(*loc_layers), nn.Sequential(*conf_layers)#, nn.Sequential(*rfes)
 
   def forward(self, x):
 
@@ -163,9 +180,12 @@ class FaceBoxes_sar(nn.Module):
     loc = list()
     conf = list()
 
-    x = self.conv1(x)
-    x = self.conv2(x)
-    x = F.max_pool2d(x, kernel_size=3, stride=2, padding=1)
+    for k in range(23):
+        x = self.vgg_base[k](x)
+    s = self.L2Norm3_3(x)
+    detection_sources.append(s)
+
+    x = self.vgg_base[23](x)  # MaxPool2d(kernel_size=2, stride=2, ceil_mode=True)
 
     x = self.inception1(x)
     detection_sources.append(x)
@@ -173,17 +193,6 @@ class FaceBoxes_sar(nn.Module):
     x = F.max_pool2d(x, kernel_size=3, stride=2, padding=1)
 
     x = self.inception2(x)
-    detection_sources.append(x)
-
-    x = F.max_pool2d(x, kernel_size=3, stride=2, padding=1)
-
-    x = self.inception3(x)
-    detection_sources.append(x)
-
-    x = F.max_pool2d(x, kernel_size=3, stride=2, padding=1)
-
-    x = self.conv3_1(x)
-    x = self.conv3_2(x)
     detection_sources.append(x)
 
     x = self.conv4_1(x)
@@ -197,14 +206,13 @@ class FaceBoxes_sar(nn.Module):
     x = self.conv6_1(x)
     x = self.conv6_2(x)
     detection_sources.append(x)
-    
-    for (x, l, c, r) in zip(detection_sources, self.loc, self.conf, self.rfes):
-        loc.append(l(r(x)).permute(0, 2, 3, 1).contiguous())
-        conf.append(c(r(x)).permute(0, 2, 3, 1).contiguous())
+    # for (x, l, c, r) in zip(detection_sources, self.loc, self.conf, self.rfes):
+    #     loc.append(l(r(x)).permute(0, 2, 3, 1).contiguous())
+    #     conf.append(c(r(x)).permute(0, 2, 3, 1).contiguous())
 
-    # for (x, l, c) in zip(detection_sources, self.loc, self.conf):
-    #     loc.append(l(x).permute(0, 2, 3, 1).contiguous())
-    #     conf.append(c(x).permute(0, 2, 3, 1).contiguous())
+    for (x, l, c) in zip(detection_sources, self.loc, self.conf):
+        loc.append(l(x).permute(0, 2, 3, 1).contiguous())
+        conf.append(c(x).permute(0, 2, 3, 1).contiguous())
         # loc.append(l(self.rfe(x)).permute(0, 2, 3, 1).contiguous())
         # conf.append(c(self.rfe(x)).permute(0, 2, 3, 1).contiguous())
 
