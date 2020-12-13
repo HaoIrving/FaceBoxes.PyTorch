@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.nn.init as init
 
-__all__ = ['GroupNormConv2d', 'Inception_GroupNorm', 'CRelu_GroupNorm', 'RFE']
+__all__ = ['L2Norm', 'GroupNormConv2d', 'Inception_GroupNorm', 'CRelu_GroupNorm', 'RFE']
 
 
 class L2Norm(nn.Module):
