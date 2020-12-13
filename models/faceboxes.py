@@ -153,24 +153,17 @@ class FaceBoxes_sar(nn.Module):
   def multibox(self, num_classes):
     loc_layers = []
     conf_layers = []
-    # rfes = []
-    # for i in range(7):
-    #   rfes += [RFE(256, 256)]
 
-    loc_layers += [nn.Conv2d(256, 3 * 4, kernel_size=3, padding=1)]
-    conf_layers += [nn.Conv2d(256, 3 * num_classes, kernel_size=3, padding=1)]
-    loc_layers += [nn.Conv2d(256, 3 * 4, kernel_size=3, padding=1)]
-    conf_layers += [nn.Conv2d(256, 3 * num_classes, kernel_size=3, padding=1)]
-    loc_layers += [nn.Conv2d(256, 3 * 4, kernel_size=3, padding=1)]
-    conf_layers += [nn.Conv2d(256, 3 * num_classes, kernel_size=3, padding=1)]
-    loc_layers += [nn.Conv2d(256, 3 * 4, kernel_size=3, padding=1)]
-    conf_layers += [nn.Conv2d(256, 3 * num_classes, kernel_size=3, padding=1)]
-    loc_layers += [nn.Conv2d(256, 3 * 4, kernel_size=3, padding=1)]
-    conf_layers += [nn.Conv2d(256, 3 * num_classes, kernel_size=3, padding=1)]
-    loc_layers += [nn.Conv2d(256, 3 * 4, kernel_size=3, padding=1)]
-    conf_layers += [nn.Conv2d(256, 3 * num_classes, kernel_size=3, padding=1)]
-    loc_layers += [nn.Conv2d(256, 3 * 4, kernel_size=3, padding=1)]
-    conf_layers += [nn.Conv2d(256, 3 * num_classes, kernel_size=3, padding=1)]
+    loc_layers += [nn.Conv2d(256, 3 * 1 * 4, kernel_size=3, padding=1)]
+    conf_layers += [nn.Conv2d(256, 3 * 1 * num_classes, kernel_size=3, padding=1)]
+    loc_layers += [nn.Conv2d(256, 3 * 2 * 4, kernel_size=3, padding=1)]
+    conf_layers += [nn.Conv2d(256, 3 * 2 * num_classes, kernel_size=3, padding=1)]
+    loc_layers += [nn.Conv2d(256, 3 * 3 * 4, kernel_size=3, padding=1)]
+    conf_layers += [nn.Conv2d(256, 3 * 3 * num_classes, kernel_size=3, padding=1)]
+    loc_layers += [nn.Conv2d(256, 3 * 2 * 4, kernel_size=3, padding=1)]
+    conf_layers += [nn.Conv2d(256, 3 * 2 * num_classes, kernel_size=3, padding=1)]
+    loc_layers += [nn.Conv2d(256, 3 * 1 * 4, kernel_size=3, padding=1)]
+    conf_layers += [nn.Conv2d(256, 3 * 1 * num_classes, kernel_size=3, padding=1)]
 
     return nn.Sequential(*loc_layers), nn.Sequential(*conf_layers)#, nn.Sequential(*rfes)
 
