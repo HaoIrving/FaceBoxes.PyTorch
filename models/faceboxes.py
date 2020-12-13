@@ -115,7 +115,7 @@ class FaceBoxes_sar(nn.Module):
     self.conv6_1 = BasicConv2d(256, 128, kernel_size=1, stride=1, padding=0)
     self.conv6_2 = BasicConv2d(128, 256, kernel_size=3, stride=2, padding=1)
     
-    self.rfe = RFE(256, 256)
+    # self.rfe = RFE(256, 256)
     self.loc, self.conf = self.multibox(self.num_classes)
 
     if self.phase == 'test':
@@ -195,8 +195,10 @@ class FaceBoxes_sar(nn.Module):
     detection_sources.append(x)
     
     for (x, l, c) in zip(detection_sources, self.loc, self.conf):
-        loc.append(l(self.rfe(x)).permute(0, 2, 3, 1).contiguous())
-        conf.append(c(self.rfe(x)).permute(0, 2, 3, 1).contiguous())
+        loc.append(l(x).permute(0, 2, 3, 1).contiguous())
+        conf.append(c(x).permute(0, 2, 3, 1).contiguous())
+        # loc.append(l(self.rfe(x)).permute(0, 2, 3, 1).contiguous())
+        # conf.append(c(self.rfe(x)).permute(0, 2, 3, 1).contiguous())
 
     loc = torch.cat([o.view(o.size(0), -1) for o in loc], 1)
     conf = torch.cat([o.view(o.size(0), -1) for o in conf], 1)
