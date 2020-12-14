@@ -154,8 +154,8 @@ class FaceBoxes_sar(nn.Module):
     loc_layers = []
     conf_layers = []
 
-    loc_layers  += [nn.Conv2d(256, 3 * 1 * 4, kernel_size=3, padding=1)]
-    conf_layers += [nn.Conv2d(256, 3 * 1 * num_classes, kernel_size=3, padding=1)]
+    loc_layers  += [nn.Conv2d(256, 3 * 2 * 4, kernel_size=3, padding=1)]
+    conf_layers += [nn.Conv2d(256, 3 * 2 * num_classes, kernel_size=3, padding=1)]
     loc_layers  += [nn.Conv2d(256, 3 * 2 * 4, kernel_size=3, padding=1)]
     conf_layers += [nn.Conv2d(256, 3 * 2 * num_classes, kernel_size=3, padding=1)]
     loc_layers  += [nn.Conv2d(256, 3 * 3 * 4, kernel_size=3, padding=1)]
