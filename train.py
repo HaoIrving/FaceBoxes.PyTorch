@@ -31,7 +31,7 @@ args = parser.parse_args()
 if not os.path.exists(args.save_folder):
     os.mkdir(args.save_folder)
 
-img_dim = 1024 # only 1024 is supported
+img_dim = 640 # only 1024 is supported
 rgb_mean = (98.13131, 98.13131, 98.13131) # bgr order
 num_classes = 2
 

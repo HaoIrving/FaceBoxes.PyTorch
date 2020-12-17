@@ -101,13 +101,13 @@ class FaceBoxes_sar(nn.Module):
     layers += [nn.BatchNorm2d(64), nn.ReLU(inplace=True)]
     layers += [nn.Conv2d(64, 64, kernel_size=3, padding=1)]
     layers += [nn.BatchNorm2d(64), nn.ReLU(inplace=True)]
-    layers += [nn.MaxPool2d(kernel_size=2, stride=2)]
+    layers += [nn.MaxPool2d(kernel_size=3, stride=2, padding=1)]
 
     layers += [nn.Conv2d(64, 128, kernel_size=3, padding=1)]   # conv2
     layers += [nn.BatchNorm2d(128), nn.ReLU(inplace=True)]
     layers += [nn.Conv2d(128, 128, kernel_size=3, padding=1)]
     layers += [nn.BatchNorm2d(128), nn.ReLU(inplace=True)]
-    layers += [nn.MaxPool2d(kernel_size=2, stride=2)]
+    layers += [nn.MaxPool2d(kernel_size=3, stride=2, padding=1)]
 
     layers += [nn.Conv2d(128, 256, kernel_size=3, padding=1)]  # conv3
     layers += [nn.BatchNorm2d(256), nn.ReLU(inplace=True)]
@@ -115,7 +115,7 @@ class FaceBoxes_sar(nn.Module):
     layers += [nn.BatchNorm2d(256), nn.ReLU(inplace=True)]
     layers += [nn.Conv2d(256, 256, kernel_size=3, padding=1)]
     layers += [nn.BatchNorm2d(256), nn.ReLU(inplace=True)]  # 22
-    layers += [nn.MaxPool2d(kernel_size=2, stride=2, ceil_mode=True)]
+    layers += [nn.MaxPool2d(kernel_size=3, stride=2, padding=1)]
     self.vgg_base = nn.ModuleList(layers)
     # Layer learns to scale the l2 normalized features from conv3_3
     self.L2Norm3_3 = L2Norm(256, 10)
