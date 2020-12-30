@@ -1,7 +1,8 @@
-.vscode
+.vscode/settings
 
 weights
 utils
 *.pyc
 eval
 data/SAR_SHIP
+data/SSDD

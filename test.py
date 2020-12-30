@@ -82,8 +82,8 @@ if __name__ == '__main__':
 
     torch.set_grad_enabled(False)
     # net and model
-    # net = FaceBoxes(phase='test', size=None, num_classes=2)    # initialize detector
-    net = FaceBoxes_sar(phase='test', size=None, num_classes=2) 
+    net = FaceBoxes(phase='test', size=None, num_classes=2)    # initialize detector
+    # net = FaceBoxes_sar(phase='test', size=None, num_classes=2) 
     net = load_model(net, args.trained_model, args.cpu)
     net.eval()
     print('Finished loading model!')
@@ -159,8 +159,8 @@ if __name__ == '__main__':
         loc, conf = net(img)  # forward pass
         _t['forward_pass'].toc()
         _t['misc'].tic()
-        # priorbox = PriorBox(cfg, image_size=(im_height, im_width))
-        priorbox = PriorBox_sar(cfg, image_size=(im_height, im_width))
+        priorbox = PriorBox(cfg, image_size=(im_height, im_width))
+        # priorbox = PriorBox_sar(cfg, image_size=(im_height, im_width))
         priors = priorbox.forward()
         priors = priors.to(device)
         prior_data = priors.data
