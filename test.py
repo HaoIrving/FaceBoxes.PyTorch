@@ -84,7 +84,7 @@ if __name__ == '__main__':
     # save file
     if not os.path.exists(args.save_folder):
         os.makedirs(args.save_folder)
-    fw = open(os.path.join(args.save_folder, args.dataset + '_dets.txt'), 'w')
+    # fw = open(os.path.join(args.save_folder, args.dataset + '_dets.txt'), 'w')
 
     # testing dataset
     testset_folder = os.path.join('data', 'SSDD', args.dataset, 'images/')
@@ -222,7 +222,7 @@ if __name__ == '__main__':
                     ymax = dets[k, 3]
                     ymin += 0.2 * (ymax - ymin + 1)
                     score = dets[k, 4]
-                    fw.write('{:s} {:.3f} {:.1f} {:.1f} {:.1f} {:.1f}\n'.format(img_name, score, xmin, ymin, xmax, ymax))
+                    # fw.write('{:s} {:.3f} {:.1f} {:.1f} {:.1f} {:.1f}\n'.format(img_name, score, xmin, ymin, xmax, ymax))
             # print('im_detect: {:d}/{:d} forward_pass_time: {:.4f}s misc: {:.4f}s'.format(i + 1, num_images, _t['forward_pass'].average_time, _t['misc'].average_time))
 
             # coco eval 
@@ -254,7 +254,7 @@ if __name__ == '__main__':
                 cv2.imshow('res', img_gt)
                 cv2.waitKey(0)
 
-        fw.close()
+        # fw.close()
 
         # coco eval
         results = evaluator.evaluate()
