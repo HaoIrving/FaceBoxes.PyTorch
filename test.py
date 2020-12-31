@@ -110,7 +110,6 @@ if __name__ == '__main__':
     DatasetCatalog.register(dataset_name, lambda: load_sar_ship_instances('data/SSDD/SSDD_test', ['ship',]))
     MetadataCatalog.get(dataset_name).set(thing_classes=['ship',])
     evaluator = COCOEvaluator(dataset_name, tasks=['bbox'], distributed=False, output_dir=args.save_folder)
-    evaluator.reset()
     
     dataset_dicts = load_sar_ship_instances('data/SSDD/SSDD_test', ['ship',])
     sar_metadata = MetadataCatalog.get("dummy_dataset")
@@ -139,6 +138,8 @@ if __name__ == '__main__':
 
         ap_stats['epoch'].append(start_epoch + index * step)
         print("evaluating epoch: {}".format(ap_stats['epoch'][-1]))
+
+        evaluator.reset()
 
         # testing begin
         for i, d in enumerate(dataset_dicts):
@@ -259,7 +260,6 @@ if __name__ == '__main__':
 
         # coco eval
         results = evaluator.evaluate()
-        del dets
         for task, res in results.items():
             # Don't print "AP-category" metrics since they are usually not tracked.
             important_res = [(k, v) for k, v in res.items() if "-" not in k]
