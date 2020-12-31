@@ -1,1 +1,1 @@
-python train.py --ngpu 4
+python train.py --ngpu 4 --num_workers 16

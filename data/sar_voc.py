@@ -35,7 +35,7 @@ def load_sar_ship_instances(dirname: str, class_names: Union[List[str], Tuple[st
     dicts = []
     for fileid in fileids:
         anno_file = os.path.join(annotation_dirname, fileid + ".xml")
-        tiff_file = os.path.join(dirname, "images", fileid + ".tiff")
+        tiff_file = os.path.join(dirname, "images", fileid + ".jpg")
 
         with PathManager.open(anno_file) as f:
             tree = ET.parse(f)

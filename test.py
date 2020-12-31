@@ -27,7 +27,7 @@ parser.add_argument('-m', '--trained_model', default='weights/Final_FaceBoxes.pt
                     type=str, help='Trained state_dict file path to open')
 parser.add_argument('--save_folder', default='eval/', type=str, help='Dir to save results')
 parser.add_argument('--cpu', action="store_true", default=False, help='Use cpu inference')
-parser.add_argument('--dataset', default='SAR_SHIP_test', type=str, choices=['AFW', 'PASCAL', 'FDDB', 'SAR_SHIP_test'], help='dataset')
+parser.add_argument('--dataset', default='SSDD_test', type=str, choices=['AFW', 'PASCAL', 'FDDB', 'SAR_SHIP_test'], help='dataset')
 parser.add_argument('--confidence_threshold', default=0.05, type=float, help='confidence_threshold')
 parser.add_argument('--top_k', default=5000, type=int, help='top_k')
 parser.add_argument('--nms_threshold', default=0.3, type=float, help='nms_threshold')
@@ -75,10 +75,10 @@ def load_model(model, pretrained_path, load_to_cpu):
 
 if __name__ == '__main__':
     # args.cpu = True
-    args.show_image = True
+    # args.show_image = True
     args.nms_threshold = 0.3
     args.vis_thres = 0.1
-    args.trained_model = 'weights/rfe/Final_FaceBoxes.pth'
+    # args.trained_model = 'weights/rfe/Final_FaceBoxes.pth'
 
     torch.set_grad_enabled(False)
     # net and model
@@ -99,8 +99,8 @@ if __name__ == '__main__':
     fw = open(os.path.join(args.save_folder, args.dataset + '_dets.txt'), 'w')
 
     # testing dataset
-    testset_folder = os.path.join('data', 'SAR_SHIP', args.dataset, 'images/')
-    testset_list = os.path.join('data', 'SAR_SHIP', args.dataset, 'img_list.txt')
+    testset_folder = os.path.join('data', 'SSDD', args.dataset, 'images/')
+    testset_list = os.path.join('data', 'SSDD', args.dataset, 'img_list.txt')
     with open(testset_list, 'r') as fr:
         test_dataset = fr.read().split()
     num_images = len(test_dataset)
@@ -112,35 +112,35 @@ if __name__ == '__main__':
         resize = 2.5
     elif args.dataset == "AFW":
         resize = 1
-    elif args.dataset == "SAR_SHIP_test":
+    elif args.dataset == "SSDD_test":
         resize = 1.5
 
     _t = {'forward_pass': Timer(), 'misc': Timer()}
 
     # coco eval 
     dataset_name = 'dummy_dataset'
-    DatasetCatalog.register(dataset_name, lambda: load_sar_ship_instances('data/SAR_SHIP/SAR_SHIP_test', ['ship',]))
+    DatasetCatalog.register(dataset_name, lambda: load_sar_ship_instances('data/SSDD/SSDD_test', ['ship',]))
     MetadataCatalog.get(dataset_name).set(thing_classes=['ship',])
     evaluator = COCOEvaluator(dataset_name, output_dir=args.save_folder)
     evaluator.reset()
     
-    dataset_dicts = load_sar_ship_instances('data/SAR_SHIP/SAR_SHIP_test', ['ship',])
+    dataset_dicts = load_sar_ship_instances('data/SSDD/SSDD_test', ['ship',])
     sar_metadata = MetadataCatalog.get("dummy_dataset")
 
     # testing begin
     for i, d in enumerate(dataset_dicts):
         img_name = d['image_id']
-        image_path = testset_folder + img_name + '.tiff'
-        img_raw = cv2.imread(image_path, -1)
+        image_path = testset_folder + img_name + '.jpg'
+        img_raw = cv2.imread(image_path)
         
-        pixel_max = img_raw.max()
-        # # pixel_min = img.min()
-        k = pixel_max ** (1 / 255)
-        img_raw = np.clip(img_raw, 1, None)
-        img_raw = np.log(img_raw) / np.log(k)
+        # pixel_max = img_raw.max()
+        # # # pixel_min = img.min()
+        # k = pixel_max ** (1 / 255)
+        # img_raw = np.clip(img_raw, 1, None)
+        # img_raw = np.log(img_raw) / np.log(k)
 
-        img_raw = img_raw[:, :, np.newaxis]
-        img_raw = np.concatenate((img_raw, img_raw, img_raw), axis=2)
+        # img_raw = img_raw[:, :, np.newaxis]
+        # img_raw = np.concatenate((img_raw, img_raw, img_raw), axis=2)
 
         img_draw = img_raw.astype(np.uint8)
         img = np.float32(img_raw)
