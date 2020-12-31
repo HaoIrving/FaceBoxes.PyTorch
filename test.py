@@ -259,6 +259,7 @@ if __name__ == '__main__':
 
         # coco eval
         results = evaluator.evaluate()
+        del dets
         for task, res in results.items():
             # Don't print "AP-category" metrics since they are usually not tracked.
             important_res = [(k, v) for k, v in res.items() if "-" not in k]
