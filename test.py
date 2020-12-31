@@ -121,7 +121,7 @@ if __name__ == '__main__':
     dataset_name = 'dummy_dataset'
     DatasetCatalog.register(dataset_name, lambda: load_sar_ship_instances('data/SSDD/SSDD_test', ['ship',]))
     MetadataCatalog.get(dataset_name).set(thing_classes=['ship',])
-    evaluator = COCOEvaluator(dataset_name, output_dir=args.save_folder)
+    evaluator = COCOEvaluator(dataset_name, distributed=False, output_dir=args.save_folder)
     evaluator.reset()
     
     dataset_dicts = load_sar_ship_instances('data/SSDD/SSDD_test', ['ship',])
