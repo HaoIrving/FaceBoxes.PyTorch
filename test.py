@@ -76,22 +76,10 @@ def load_model(model, pretrained_path, load_to_cpu):
 if __name__ == '__main__':
     # args.cpu = True
     # args.show_image = True
-    args.nms_threshold = 0.3
+    args.nms_threshold = 0.6
+    # args.confidence_threshold = 0.1
     args.vis_thres = 0.1
     # args.trained_model = 'weights/rfe/Final_FaceBoxes.pth'
-
-    torch.set_grad_enabled(False)
-    # net and model
-    net = FaceBoxes(phase='test', size=None, num_classes=2)    # initialize detector
-    # net = FaceBoxes_sar(phase='test', size=None, num_classes=2) 
-    net = load_model(net, args.trained_model, args.cpu)
-    net.eval()
-    print('Finished loading model!')
-    print(net)
-    cudnn.benchmark = True
-    device = torch.device("cpu" if args.cpu else "cuda")
-    net = net.to(device)
-
 
     # save file
     if not os.path.exists(args.save_folder):
@@ -126,130 +114,178 @@ if __name__ == '__main__':
     
     dataset_dicts = load_sar_ship_instances('data/SSDD/SSDD_test', ['ship',])
     sar_metadata = MetadataCatalog.get("dummy_dataset")
+    
+    torch.set_grad_enabled(False)
+    cudnn.benchmark = True
+    device = torch.device("cpu" if args.cpu else "cuda")
+    # net and model
+    net = FaceBoxes(phase='test', size=None, num_classes=2)    # initialize detector
+    # net = FaceBoxes_sar(phase='test', size=None, num_classes=2) 
 
-    # testing begin
-    for i, d in enumerate(dataset_dicts):
-        img_name = d['image_id']
-        image_path = testset_folder + img_name + '.jpg'
-        img_raw = cv2.imread(image_path)
+    ap_stats = {"ap":[], "ap50": [], "ap_small": [], "ap_medium": [], "ap_large": [], "epoch": []}
+
+    start_epoch = 20; step = 20
+    # ToBeTested = ['weights/RFB_vgg_COCO_epoches_100.pth']
+    ToBeTested = [f'weights/FaceBoxes_epoch_{epoch}.pth' for epoch in range(start_epoch, 300, step)]
+    ToBeTested.append('weights/Final_FaceBoxes.pth') # 68.5
+    for index, model_path in enumerate(ToBeTested):
+        args.trained_model = model_path
+        net = load_model(net, args.trained_model, args.cpu)
+        net.eval()
+        print('Finished loading model!')
+        # print(net)
+        net = net.to(device)
+
+        ap_stats['epoch'].append(start_epoch + index * step)
+        print("evaluating epoch: {}".format(ap_stats['epoch'][-1]))
+
+        # testing begin
+        for i, d in enumerate(dataset_dicts):
+            img_name = d['image_id']
+            image_path = testset_folder + img_name + '.jpg'
+            img_raw = cv2.imread(image_path, -1)
+            
+            # pixel_max = img_raw.max()
+            # # # pixel_min = img.min()
+            # k = pixel_max ** (1 / 255)
+            # img_raw = np.clip(img_raw, 1, None)
+            # img_raw = np.log(img_raw) / np.log(k)
+
+            # img_raw = img_raw[:, :, np.newaxis]
+            # img_raw = np.concatenate((img_raw, img_raw, img_raw), axis=2)
+
+            img_draw = img_raw.astype(np.uint8)
+            img = np.float32(img_raw)
+
+            if resize != 1:
+                img = cv2.resize(img, None, None, fx=resize, fy=resize, interpolation=cv2.INTER_LINEAR)
+            im_height, im_width, _ = img.shape
+            scale = torch.Tensor([img.shape[1], img.shape[0], img.shape[1], img.shape[0]])
+            img -= (98.13131, 98.13131, 98.13131)
+            img = img.transpose(2, 0, 1)
+            img = torch.from_numpy(img).unsqueeze(0)
+            img = img.to(device)
+            scale = scale.to(device)
+
+            _t['forward_pass'].tic()
+            loc, conf = net(img)  # forward pass
+            _t['forward_pass'].toc()
+            _t['misc'].tic()
+            priorbox = PriorBox(cfg, image_size=(im_height, im_width))
+            # priorbox = PriorBox_sar(cfg, image_size=(im_height, im_width))
+            priors = priorbox.forward()
+            priors = priors.to(device)
+            prior_data = priors.data
+            boxes = decode(loc.data.squeeze(0), prior_data, cfg['variance'])
+            boxes = boxes * scale / resize
+            boxes = boxes.cpu().numpy()
+            scores = conf.squeeze(0).data.cpu().numpy()[:, 1]
+
+            # ignore low scores
+            inds = np.where(scores > args.confidence_threshold)[0]
+            boxes = boxes[inds]
+            scores = scores[inds]
+
+            # keep top-K before NMS
+            order = scores.argsort()[::-1][:args.top_k]
+            boxes = boxes[order]
+            scores = scores[order]
+
+            # do NMS
+            dets = np.hstack((boxes, scores[:, np.newaxis])).astype(np.float32, copy=False)
+            #keep = py_cpu_nms(dets, args.nms_threshold)
+            keep = nms(dets, args.nms_threshold,force_cpu=args.cpu)
+            dets = dets[keep, :]
+
+            # keep top-K faster NMS
+            dets = dets[:args.keep_top_k, :]
+            _t['misc'].toc()
+
+            # save dets
+            if args.dataset == "FDDB":
+                fw.write('{:s}\n'.format(img_name))
+                fw.write('{:.1f}\n'.format(dets.shape[0]))
+                for k in range(dets.shape[0]):
+                    xmin = dets[k, 0]
+                    ymin = dets[k, 1]
+                    xmax = dets[k, 2]
+                    ymax = dets[k, 3]
+                    score = dets[k, 4]
+                    w = xmax - xmin + 1
+                    h = ymax - ymin + 1
+                    fw.write('{:.3f} {:.3f} {:.3f} {:.3f} {:.10f}\n'.format(xmin, ymin, w, h, score))
+            else:
+                for k in range(dets.shape[0]):
+                    xmin = dets[k, 0]
+                    ymin = dets[k, 1]
+                    xmax = dets[k, 2]
+                    ymax = dets[k, 3]
+                    ymin += 0.2 * (ymax - ymin + 1)
+                    score = dets[k, 4]
+                    fw.write('{:s} {:.3f} {:.1f} {:.1f} {:.1f} {:.1f}\n'.format(img_name, score, xmin, ymin, xmax, ymax))
+            # print('im_detect: {:d}/{:d} forward_pass_time: {:.4f}s misc: {:.4f}s'.format(i + 1, num_images, _t['forward_pass'].average_time, _t['misc'].average_time))
+
+            # coco eval 
+            inputs = {"image_id": img_name}
+            h, w, _ = img_raw.shape
+            outputs = Instances((h, w))
+            outputs.pred_boxes = Boxes(dets[:, :4])
+            classes = [0 for _ in dets]
+            classes = torch.tensor(classes, dtype=torch.int64)
+            outputs.pred_classes = classes
+            outputs.scores = torch.tensor(dets[:, 4])
+            evaluator.process([inputs], [{'instances': outputs}])
+
+            # show image
+            if args.show_image:
+                visualizer = Visualizer(img_draw, metadata=sar_metadata, scale=1)
+                out = visualizer.draw_dataset_dict(d)
+                img_gt = out.get_image()
+                for b in dets:
+                    if b[4] < args.vis_thres:
+                        continue
+                    text = "{:.4f}".format(b[4])
+                    b = list(map(int, b))
+                    cv2.rectangle(img_gt, (b[0], b[1]), (b[2], b[3]), (0, 0, 255), 2)
+                    cx = b[0]
+                    cy = b[1] + 12
+                    cv2.putText(img_gt, text, (cx, cy),
+                                cv2.FONT_HERSHEY_DUPLEX, 0.5, (255, 255, 255))
+                cv2.imshow('res', img_gt)
+                cv2.waitKey(0)
+
+        fw.close()
+
+        # coco eval
+        results = evaluator.evaluate()
+        for task, res in results.items():
+            # Don't print "AP-category" metrics since they are usually not tracked.
+            important_res = [(k, v) for k, v in res.items() if "-" not in k]
+            print("copypaste: Task: {}".format(task))
+            print("copypaste: " + ",".join([k[0] for k in important_res]))
+            print("copypaste: " + ",".join(["{0:.4f}".format(k[1]) for k in important_res]))
+        print("AP50: {}, FPS: {}".format(results['bbox']['AP50'], 1 / _t['forward_pass'].average_time))
         
-        # pixel_max = img_raw.max()
-        # # # pixel_min = img.min()
-        # k = pixel_max ** (1 / 255)
-        # img_raw = np.clip(img_raw, 1, None)
-        # img_raw = np.log(img_raw) / np.log(k)
+        ap_stats['ap'].append(results['bbox']['AP'])
+        ap_stats['ap50'].append(results['bbox']['AP50'])
+        ap_stats['ap_small'].append(results['bbox']['APs'])
+        ap_stats['ap_medium'].append(results['bbox']['APm'])
+        ap_stats['ap_large'].append(results['bbox']['APl'])
 
-        # img_raw = img_raw[:, :, np.newaxis]
-        # img_raw = np.concatenate((img_raw, img_raw, img_raw), axis=2)
+    print(ap_stats)
+    save_folder = args.save_folder
+    res_file = os.path.join(save_folder, 'ap_stats.json')
+    import json
+    print('Writing ap stats json to {}'.format(res_file))
+    with open(res_file, 'w') as fid:
+        json.dump(ap_stats, fid)
+    with open(res_file) as f:
+        ap_stats = json.load(f)
+    
+    from plot_curve import plot_map, plot_loss
+    metrics = ['ap', 'ap50', 'ap_small', 'ap_medium', 'ap_large']
+    legend  = ['ap', 'ap50', 'ap_small', 'ap_medium', 'ap_large']
+    plot_map(save_folder, ap_stats, metrics, legend)
 
-        img_draw = img_raw.astype(np.uint8)
-        img = np.float32(img_raw)
-
-        if resize != 1:
-            img = cv2.resize(img, None, None, fx=resize, fy=resize, interpolation=cv2.INTER_LINEAR)
-        im_height, im_width, _ = img.shape
-        scale = torch.Tensor([img.shape[1], img.shape[0], img.shape[1], img.shape[0]])
-        img -= (98.13131, 98.13131, 98.13131)
-        img = img.transpose(2, 0, 1)
-        img = torch.from_numpy(img).unsqueeze(0)
-        img = img.to(device)
-        scale = scale.to(device)
-
-        _t['forward_pass'].tic()
-        loc, conf = net(img)  # forward pass
-        _t['forward_pass'].toc()
-        _t['misc'].tic()
-        priorbox = PriorBox(cfg, image_size=(im_height, im_width))
-        # priorbox = PriorBox_sar(cfg, image_size=(im_height, im_width))
-        priors = priorbox.forward()
-        priors = priors.to(device)
-        prior_data = priors.data
-        boxes = decode(loc.data.squeeze(0), prior_data, cfg['variance'])
-        boxes = boxes * scale / resize
-        boxes = boxes.cpu().numpy()
-        scores = conf.squeeze(0).data.cpu().numpy()[:, 1]
-
-        # ignore low scores
-        inds = np.where(scores > args.confidence_threshold)[0]
-        boxes = boxes[inds]
-        scores = scores[inds]
-
-        # keep top-K before NMS
-        order = scores.argsort()[::-1][:args.top_k]
-        boxes = boxes[order]
-        scores = scores[order]
-
-        # do NMS
-        dets = np.hstack((boxes, scores[:, np.newaxis])).astype(np.float32, copy=False)
-        #keep = py_cpu_nms(dets, args.nms_threshold)
-        keep = nms(dets, args.nms_threshold,force_cpu=args.cpu)
-        dets = dets[keep, :]
-
-        # keep top-K faster NMS
-        dets = dets[:args.keep_top_k, :]
-        _t['misc'].toc()
-
-        # save dets
-        if args.dataset == "FDDB":
-            fw.write('{:s}\n'.format(img_name))
-            fw.write('{:.1f}\n'.format(dets.shape[0]))
-            for k in range(dets.shape[0]):
-                xmin = dets[k, 0]
-                ymin = dets[k, 1]
-                xmax = dets[k, 2]
-                ymax = dets[k, 3]
-                score = dets[k, 4]
-                w = xmax - xmin + 1
-                h = ymax - ymin + 1
-                fw.write('{:.3f} {:.3f} {:.3f} {:.3f} {:.10f}\n'.format(xmin, ymin, w, h, score))
-        else:
-            for k in range(dets.shape[0]):
-                xmin = dets[k, 0]
-                ymin = dets[k, 1]
-                xmax = dets[k, 2]
-                ymax = dets[k, 3]
-                ymin += 0.2 * (ymax - ymin + 1)
-                score = dets[k, 4]
-                fw.write('{:s} {:.3f} {:.1f} {:.1f} {:.1f} {:.1f}\n'.format(img_name, score, xmin, ymin, xmax, ymax))
-        print('im_detect: {:d}/{:d} forward_pass_time: {:.4f}s misc: {:.4f}s'.format(i + 1, num_images, _t['forward_pass'].average_time, _t['misc'].average_time))
-
-        # coco eval 
-        inputs = {"image_id": img_name}
-        h, w, _ = img_raw.shape
-        outputs = Instances((h, w))
-        outputs.pred_boxes = Boxes(dets[:, :4])
-        classes = [0 for _ in dets]
-        classes = torch.tensor(classes, dtype=torch.int64)
-        outputs.pred_classes = classes
-        outputs.scores = torch.tensor(dets[:, 4])
-        evaluator.process([inputs], [{'instances': outputs}])
-
-        # show image
-        if args.show_image:
-            visualizer = Visualizer(img_draw, metadata=sar_metadata, scale=1)
-            out = visualizer.draw_dataset_dict(d)
-            img_gt = out.get_image()
-            for b in dets:
-                if b[4] < args.vis_thres:
-                    continue
-                text = "{:.4f}".format(b[4])
-                b = list(map(int, b))
-                cv2.rectangle(img_gt, (b[0], b[1]), (b[2], b[3]), (0, 0, 255), 2)
-                cx = b[0]
-                cy = b[1] + 12
-                cv2.putText(img_gt, text, (cx, cy),
-                            cv2.FONT_HERSHEY_DUPLEX, 0.5, (255, 255, 255))
-            cv2.imshow('res', img_gt)
-            cv2.waitKey(0)
-
-    fw.close()
-
-    # coco eval
-    results = evaluator.evaluate()
-    for task, res in results.items():
-        # Don't print "AP-category" metrics since they are usually not tracked.
-        important_res = [(k, v) for k, v in res.items() if "-" not in k]
-        print("copypaste: Task: {}".format(task))
-        print("copypaste: " + ",".join([k[0] for k in important_res]))
-        print("copypaste: " + ",".join(["{0:.4f}".format(k[1]) for k in important_res]))
-    print("AP50: {}, FPS: {}".format(results['bbox']['AP50'], 1 / _t['forward_pass'].average_time))
+    # txt_log = 'weights/log.txt'
+    # plot_loss(save_folder, txt_log)
