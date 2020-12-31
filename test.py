@@ -126,7 +126,8 @@ if __name__ == '__main__':
 
     start_epoch = 20; step = 20
     # ToBeTested = ['weights/RFB_vgg_COCO_epoches_100.pth']
-    ToBeTested = [f'weights/FaceBoxes_epoch_{epoch}.pth' for epoch in range(start_epoch, 300, step)]
+    ToBeTested = []
+    # ToBeTested = [f'weights/FaceBoxes_epoch_{epoch}.pth' for epoch in range(start_epoch, 300, step)]
     ToBeTested.append('weights/Final_FaceBoxes.pth') # 68.5
     for index, model_path in enumerate(ToBeTested):
         args.trained_model = model_path
