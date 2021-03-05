@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.nn.init as init
 
-__all__ = ['L2Norm', 'GroupNormConv2d', 'Inception_GroupNorm', 'CRelu_GroupNorm', 'RFE']
+__all__ = ['L2Norm', 'RFE']
 
 
 class L2Norm(nn.Module):
@@ -24,72 +24,6 @@ class L2Norm(nn.Module):
         x = torch.div(x,norm)
         out = self.weight.unsqueeze(0).unsqueeze(2).unsqueeze(3).expand_as(x) * x
         return out
-
-class DeformConv2d(nn.Module):
-
-    def __init__(self, in_channels, out_channels, **kwargs):
-        super(DeformConv2d, self).__init__()
-        self.conv = nn.Conv2d(in_channels, out_channels, bias=False, **kwargs)
-        self.bn = nn.BatchNorm2d(out_channels, eps=1e-5)
-
-    def forward(self, x):
-        x = self.conv(x)
-        x = self.bn(x)
-        return F.relu(x, inplace=True)
-
-class GroupNormConv2d(nn.Module):
-
-    def __init__(self, in_channels, out_channels, **kwargs):
-        super(GroupNormConv2d, self).__init__()
-        self.conv = nn.Conv2d(in_channels, out_channels, bias=False, **kwargs)
-        self.gn = nn.GroupNorm(out_channels // 4, out_channels, eps=1e-5)
-
-    def forward(self, x):
-        x = self.conv(x)
-        x = self.gn(x)
-        return F.relu(x, inplace=True)
-
-class Inception_GroupNorm(nn.Module):
-
-  def __init__(self, in_channels=128):
-    super(Inception_GroupNorm, self).__init__()
-    self.branch1x1 = GroupNormConv2d(in_channels, 64, kernel_size=1, padding=0)
-    self.branch1x1_2 = GroupNormConv2d(in_channels, 64, kernel_size=1, padding=0)
-    self.branch3x3_reduce = GroupNormConv2d(in_channels, 24, kernel_size=1, padding=0)
-    self.branch3x3 = GroupNormConv2d(24, 64, kernel_size=3, padding=1)
-    self.branch3x3_reduce_2 = GroupNormConv2d(in_channels, 24, kernel_size=1, padding=0)
-    self.branch3x3_2 = GroupNormConv2d(24, 32, kernel_size=3, padding=1)
-    self.branch3x3_3 = GroupNormConv2d(32, 64, kernel_size=3, padding=1)
-
-  def forward(self, x):
-    branch1x1 = self.branch1x1(x)
-
-    branch1x1_pool = F.avg_pool2d(x, kernel_size=3, stride=1, padding=1)
-    branch1x1_2 = self.branch1x1_2(branch1x1_pool)
-
-    branch3x3_reduce = self.branch3x3_reduce(x)
-    branch3x3 = self.branch3x3(branch3x3_reduce)
-
-    branch3x3_reduce_2 = self.branch3x3_reduce_2(x)
-    branch3x3_2 = self.branch3x3_2(branch3x3_reduce_2)
-    branch3x3_3 = self.branch3x3_3(branch3x3_2)
-
-    outputs = [branch1x1, branch1x1_2, branch3x3, branch3x3_3]
-    return torch.cat(outputs, 1)
-
-class CRelu_GroupNorm(nn.Module):
-
-  def __init__(self, in_channels, out_channels, **kwargs):
-    super(CRelu_GroupNorm, self).__init__()
-    self.conv = nn.Conv2d(in_channels, out_channels, bias=False, **kwargs)
-    self.gn = nn.GroupNorm(out_channels // 4, out_channels, eps=1e-5)
-
-  def forward(self, x):
-    x = self.conv(x)
-    x = self.gn(x)
-    x = torch.cat([x, -x], 1)
-    x = F.relu(x, inplace=True)
-    return x
 
 class RFE(nn.Module):
     """

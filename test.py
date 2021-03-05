@@ -76,9 +76,8 @@ def load_model(model, pretrained_path, load_to_cpu):
 if __name__ == '__main__':
     # args.cpu = True
     # args.show_image = True
-    args.nms_threshold = 0.6
-    # args.confidence_threshold = 0.1
-    args.vis_thres = 0.1
+    args.nms_threshold = 0.6  # nms
+    # args.nms_threshold = 0.45  # snms
     # args.trained_model = 'weights/rfe/Final_FaceBoxes.pth'
 
     # save file
@@ -196,6 +195,7 @@ if __name__ == '__main__':
             dets = np.hstack((boxes, scores[:, np.newaxis])).astype(np.float32, copy=False)
             #keep = py_cpu_nms(dets, args.nms_threshold)
             keep = nms(dets, args.nms_threshold,force_cpu=args.cpu)
+            # keep = soft_nms(dets, sigma=0.5, Nt=args.nms_threshold, threshold=args.confidence_threshold, method=1)  # higher performance
             dets = dets[keep, :]
 
             # keep top-K faster NMS
