@@ -60,6 +60,24 @@ class CRelu(nn.Module):
     return x
 
 
+class SELayer(nn.Module):
+    def __init__(self, channel, reduction=16):
+        super(SELayer, self).__init__()
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.fc = nn.Sequential(
+                nn.Linear(channel, channel // reduction),
+                nn.ReLU(inplace=True),
+                nn.Linear(channel // reduction, channel),
+                nn.Sigmoid()
+        )
+
+    def forward(self, x):
+        b, c, _, _ = x.size()
+        y = self.avg_pool(x).view(b, c)
+        y = self.fc(y).view(b, c, 1, 1)
+        return x * y
+
+
 class FaceBoxes(nn.Module):
 
   def __init__(self, phase, size, num_classes):
@@ -72,14 +90,19 @@ class FaceBoxes(nn.Module):
     self.conv2 = CRelu(48, 64, kernel_size=5, stride=2, padding=2)
 
     self.inception1 = Inception()
+    self.se1 = SELayer(128)
     self.inception2 = Inception()
+    self.se2 = SELayer(128)
     self.inception3 = Inception()
+    self.se3 = SELayer(128)
 
     self.conv3_1 = BasicConv2d(128, 128, kernel_size=1, stride=1, padding=0)
     self.conv3_2 = BasicConv2d(128, 256, kernel_size=3, stride=2, padding=1)
+    self.se4 = SELayer(256)
 
     self.conv4_1 = BasicConv2d(256, 128, kernel_size=1, stride=1, padding=0)
     self.conv4_2 = BasicConv2d(128, 256, kernel_size=3, stride=2, padding=1)
+    self.se5 = SELayer(256)
 
     self.loc, self.conf = self.multibox(self.num_classes)
 
@@ -120,16 +143,21 @@ class FaceBoxes(nn.Module):
     x = self.conv2(x)
     x = F.max_pool2d(x, kernel_size=3, stride=2, padding=1)
     x = self.inception1(x)
+    x = self.se1(x)
     x = self.inception2(x)
+    x = self.se2(x)
     x = self.inception3(x)
+    x = self.se3(x)
     detection_sources.append(x)
 
     x = self.conv3_1(x)
     x = self.conv3_2(x)
+    x = self.se4(x)
     detection_sources.append(x)
 
     x = self.conv4_1(x)
     x = self.conv4_2(x)
+    x = self.se5(x)
     detection_sources.append(x)
 
     for (x, l, c) in zip(detection_sources, self.loc, self.conf):

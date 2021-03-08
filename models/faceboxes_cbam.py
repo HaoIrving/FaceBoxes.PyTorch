@@ -60,6 +60,44 @@ class CRelu(nn.Module):
     return x
 
 
+class CBAM_Module(nn.Module):
+
+    def __init__(self, channels, reduction=16):
+        super(CBAM_Module, self).__init__()
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.max_pool = nn.AdaptiveMaxPool2d(1)
+        self.fc1 = nn.Conv2d(channels, channels // reduction, kernel_size=1,
+                             padding=0)
+        self.relu = nn.ReLU(inplace=True)
+        self.fc2 = nn.Conv2d(channels // reduction, channels, kernel_size=1,
+                             padding=0)
+        self.sigmoid_channel = nn.Sigmoid()
+        self.conv_after_concat = nn.Conv2d(2, 1, kernel_size = 7, stride=1, padding = 3)
+        self.sigmoid_spatial = nn.Sigmoid()
+
+    def forward(self, x):
+        module_input = x
+        avg = self.avg_pool(x)
+        mx = self.max_pool(x)
+        avg = self.fc1(avg)
+        mx = self.fc1(mx)
+        avg = self.relu(avg)
+        mx = self.relu(mx)
+        avg = self.fc2(avg)
+        mx = self.fc2(mx)
+        x = avg + mx
+        x = self.sigmoid_channel(x)
+        x = module_input * x
+        module_input = x
+        avg = torch.mean(x, 1, True)
+        mx, _ = torch.max(x, 1, True)
+        x = torch.cat((avg, mx), 1)
+        x = self.conv_after_concat(x)
+        x = self.sigmoid_spatial(x)
+        x = module_input * x
+        return x
+        
+
 class FaceBoxes(nn.Module):
 
   def __init__(self, phase, size, num_classes):
@@ -72,14 +110,19 @@ class FaceBoxes(nn.Module):
     self.conv2 = CRelu(48, 64, kernel_size=5, stride=2, padding=2)
 
     self.inception1 = Inception()
+    self.cbam1 = CBAM_Module(128)
     self.inception2 = Inception()
+    self.cbam2 = CBAM_Module(128)
     self.inception3 = Inception()
+    self.cbam3 = CBAM_Module(128)
 
     self.conv3_1 = BasicConv2d(128, 128, kernel_size=1, stride=1, padding=0)
     self.conv3_2 = BasicConv2d(128, 256, kernel_size=3, stride=2, padding=1)
+    self.cbam4 = CBAM_Module(256)
 
     self.conv4_1 = BasicConv2d(256, 128, kernel_size=1, stride=1, padding=0)
     self.conv4_2 = BasicConv2d(128, 256, kernel_size=3, stride=2, padding=1)
+    self.cbam5 = CBAM_Module(256)
 
     self.loc, self.conf = self.multibox(self.num_classes)
 
@@ -120,16 +163,21 @@ class FaceBoxes(nn.Module):
     x = self.conv2(x)
     x = F.max_pool2d(x, kernel_size=3, stride=2, padding=1)
     x = self.inception1(x)
+    x = self.cbam1(x)
     x = self.inception2(x)
+    x = self.cbam2(x)
     x = self.inception3(x)
+    x = self.cbam3(x)
     detection_sources.append(x)
 
     x = self.conv3_1(x)
     x = self.conv3_2(x)
+    x = self.cbam4(x)
     detection_sources.append(x)
 
     x = self.conv4_1(x)
     x = self.conv4_2(x)
+    x = self.cbam5(x)
     detection_sources.append(x)
 
     for (x, l, c) in zip(detection_sources, self.loc, self.conf):

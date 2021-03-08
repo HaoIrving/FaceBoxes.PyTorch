@@ -11,10 +11,13 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "env": {
-                // "CUDA_VISIBLE_DEVICES": "1,2"
+                "CUDA_VISIBLE_DEVICES": "2"
             },
             "args":[
-                // "--ngpu", "1",
+                "--ngpu", "1",
+                "-b", "2",
+                "--num_workers", "0",
+                
             ]
         }
     ]

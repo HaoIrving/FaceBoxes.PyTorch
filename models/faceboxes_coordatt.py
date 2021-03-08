@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from .lib.coordatt import CoordAtt
+
 
 class BasicConv2d(nn.Module):
 
@@ -72,14 +74,19 @@ class FaceBoxes(nn.Module):
     self.conv2 = CRelu(48, 64, kernel_size=5, stride=2, padding=2)
 
     self.inception1 = Inception()
+    self.cda1 = CoordAtt(128, 128)
     self.inception2 = Inception()
+    self.cda2 = CoordAtt(128, 128)
     self.inception3 = Inception()
+    self.cda3 = CoordAtt(128, 128)
 
     self.conv3_1 = BasicConv2d(128, 128, kernel_size=1, stride=1, padding=0)
     self.conv3_2 = BasicConv2d(128, 256, kernel_size=3, stride=2, padding=1)
+    self.cda4 = CoordAtt(256, 256)
 
     self.conv4_1 = BasicConv2d(256, 128, kernel_size=1, stride=1, padding=0)
     self.conv4_2 = BasicConv2d(128, 256, kernel_size=3, stride=2, padding=1)
+    self.cda5 = CoordAtt(256, 256)
 
     self.loc, self.conf = self.multibox(self.num_classes)
 
@@ -120,16 +127,21 @@ class FaceBoxes(nn.Module):
     x = self.conv2(x)
     x = F.max_pool2d(x, kernel_size=3, stride=2, padding=1)
     x = self.inception1(x)
+    x = self.cda1(x)
     x = self.inception2(x)
+    x = self.cda2(x)
     x = self.inception3(x)
+    x = self.cda3(x)
     detection_sources.append(x)
 
     x = self.conv3_1(x)
     x = self.conv3_2(x)
+    x = self.cda4(x)
     detection_sources.append(x)
 
     x = self.conv4_1(x)
     x = self.conv4_2(x)
+    x = self.cda5(x)
     detection_sources.append(x)
 
     for (x, l, c) in zip(detection_sources, self.loc, self.conf):

@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .modules import *
+from .lib.non_local_embedded_gaussian import NONLocalBlock2D
 
 class BasicConv2d(nn.Module):
 
@@ -45,33 +45,6 @@ class Inception(nn.Module):
     outputs = [branch1x1, branch1x1_2, branch3x3, branch3x3_3]
     return torch.cat(outputs, 1)
 
-class Inception_v2(nn.Module):
-
-  def __init__(self, in_channels=128):
-    super(Inception_v2, self).__init__()
-    self.branch1x1 = BasicConv2d(in_channels, 64, kernel_size=1, padding=0)
-    self.branch1x1_2 = BasicConv2d(in_channels, 64, kernel_size=1, padding=0)
-    self.branch3x3_reduce = BasicConv2d(in_channels, 24, kernel_size=1, padding=0)
-    self.branch3x3 = BasicConv2d(24, 64, kernel_size=3, padding=1)
-    self.branch3x3_reduce_2 = BasicConv2d(in_channels, 24, kernel_size=1, padding=0)
-    self.branch3x3_2 = BasicConv2d(24, 32, kernel_size=3, padding=1)
-    self.branch3x3_3 = BasicConv2d(32, 64, kernel_size=3, padding=1)
-
-  def forward(self, x):
-    branch1x1 = self.branch1x1(x)
-
-    branch1x1_pool = F.avg_pool2d(x, kernel_size=3, stride=1, padding=1)
-    branch1x1_2 = self.branch1x1_2(branch1x1_pool)
-
-    branch3x3_reduce = self.branch3x3_reduce(x)
-    branch3x3 = self.branch3x3(branch3x3_reduce)
-
-    branch3x3_reduce_2 = self.branch3x3_reduce_2(x)
-    branch3x3_2 = self.branch3x3_2(branch3x3_reduce_2)
-    branch3x3_3 = self.branch3x3_3(branch3x3_2)
-
-    outputs = [branch1x1, branch1x1_2, branch3x3, branch3x3_3]
-    return torch.cat(outputs, 1)
 
 class CRelu(nn.Module):
 
@@ -100,14 +73,19 @@ class FaceBoxes(nn.Module):
     self.conv2 = CRelu(48, 64, kernel_size=5, stride=2, padding=2)
 
     self.inception1 = Inception()
+    self.nl1 = NONLocalBlock2D(128)
     self.inception2 = Inception()
+    self.nl2= NONLocalBlock2D(128)
     self.inception3 = Inception()
+    self.nl3 = NONLocalBlock2D(128)
 
     self.conv3_1 = BasicConv2d(128, 128, kernel_size=1, stride=1, padding=0)
     self.conv3_2 = BasicConv2d(128, 256, kernel_size=3, stride=2, padding=1)
+    self.nl4 = NONLocalBlock2D(256)
 
     self.conv4_1 = BasicConv2d(256, 128, kernel_size=1, stride=1, padding=0)
     self.conv4_2 = BasicConv2d(128, 256, kernel_size=3, stride=2, padding=1)
+    self.nl5 = NONLocalBlock2D(256)
 
     self.loc, self.conf = self.multibox(self.num_classes)
 
@@ -148,16 +126,21 @@ class FaceBoxes(nn.Module):
     x = self.conv2(x)
     x = F.max_pool2d(x, kernel_size=3, stride=2, padding=1)
     x = self.inception1(x)
+    x = self.nl1(x)
     x = self.inception2(x)
+    x = self.nl2(x)
     x = self.inception3(x)
+    x = self.nl3(x)
     detection_sources.append(x)
 
     x = self.conv3_1(x)
     x = self.conv3_2(x)
+    x = self.nl4(x)
     detection_sources.append(x)
 
     x = self.conv4_1(x)
     x = self.conv4_2(x)
+    x = self.nl5(x)
     detection_sources.append(x)
 
     for (x, l, c) in zip(detection_sources, self.loc, self.conf):

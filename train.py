@@ -7,11 +7,12 @@ import argparse
 import torch.utils.data as data
 from data import AnnotationTransform, VOCDetection, detection_collate, preproc, cfg
 from layers.modules import MultiBoxLoss
-from layers.functions.prior_box import PriorBox, PriorBox_sar, PriorBox_sar_old
+from layers.functions.prior_box import PriorBox
+from models.faceboxes import FaceBoxes
+
 import time
 import datetime
 import math
-from models.faceboxes import FaceBoxes, FaceBoxes_sar
 
 parser = argparse.ArgumentParser(description='FaceBoxes Training')
 parser.add_argument('--training_dataset', default='./data/SSDD/SSDD_train', help='Training dataset directory')
@@ -26,10 +27,37 @@ parser.add_argument('-max', '--max_epoch', default=300, type=int, help='max epoc
 parser.add_argument('--weight_decay', default=5e-4, type=float, help='Weight decay for SGD')
 parser.add_argument('--gamma', default=0.1, type=float, help='Gamma update for SGD')
 parser.add_argument('--save_folder', default='./weights/', help='Location to save checkpoint models')
+parser.add_argument('-nl', '--non_local', action="store_true", default=False, help=' ')
+parser.add_argument('-se', '--se', action="store_true", default=False, help=' ')
+parser.add_argument('-cbam', '--cbam', action="store_true", default=False, help=' ')
+parser.add_argument('-gcb', '--gcb', action="store_true", default=False, help=' ')
+parser.add_argument('-cda', '--coordatt', action="store_true", default=False, help=' ')
 args = parser.parse_args()
 
 if not os.path.exists(args.save_folder):
     os.mkdir(args.save_folder)
+
+args.coordatt=True
+coordatt = args.coordatt
+# args.gcb=True
+gcb = args.gcb
+# args.cbam=True
+cbam = args.cbam
+# args.se=True
+se = args.se
+# args.non_local=True
+non_local = args.non_local
+if non_local:
+    from models.faceboxes_nonlocal import FaceBoxes
+if se:
+    from models.faceboxes_se import FaceBoxes
+if cbam:
+    from models.faceboxes_cbam import FaceBoxes
+if gcb:
+    from models.faceboxes_gcb import FaceBoxes
+if coordatt:
+    from models.faceboxes_coordatt import FaceBoxes
+
 
 img_dim = 1024 # only 1024 is supported
 rgb_mean = (98.13131, 98.13131, 98.13131) # bgr order
@@ -83,9 +111,6 @@ optimizer = optim.SGD(net.parameters(), lr=initial_lr, momentum=momentum, weight
 criterion = MultiBoxLoss(num_classes, 0.35, True, 0, True, 7, 0.35, False)
 
 priorbox = PriorBox(cfg, image_size=(img_dim, img_dim))
-# priorbox = PriorBox_sar(cfg, image_size=(img_dim, img_dim))
-# priorbox = PriorBox_sar_old(cfg, image_size=(img_dim, img_dim))
-
 with torch.no_grad():
     priors = priorbox.forward()
     priors = priors.to(device)
