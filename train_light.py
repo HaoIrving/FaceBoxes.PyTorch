@@ -34,12 +34,22 @@ parser.add_argument('-se', '--se', action="store_true", default=False, help=' ')
 parser.add_argument('-cbam', '--cbam', action="store_true", default=False, help=' ')
 parser.add_argument('-gcb', '--gcb', action="store_true", default=False, help=' ')
 parser.add_argument('-cda', '--coordatt', action="store_true", default=False, help=' ')
+parser.add_argument('-x', '--xception', action="store_true", default=False, help=' ')
+parser.add_argument('-mb', '--mobile', action="store_true", default=False, help=' ')
+parser.add_argument('-shf', '--shuffle', action="store_true", default=False, help=' ')
 args = parser.parse_args()
 
 if not os.path.exists(args.save_folder):
     os.mkdir(args.save_folder)
 
 sys.stdout = Logger(os.path.join(args.save_folder, 'log.txt'))
+
+# args.shuffle=True
+shuffle = args.shuffle
+# args.mobile=True
+mobile = args.mobile
+# args.xception=True
+xception = args.xception
 
 # args.coordatt=True
 coordatt = args.coordatt
@@ -62,6 +72,12 @@ if gcb:
 if coordatt:
     from models.faceboxes_coordatt import FaceBoxes
 
+if xception:
+    from models_light.faceboxes_xception import FaceBoxes
+if mobile:
+    from models_light.faceboxes_xception_mbv2 import FaceBoxes
+if shuffle:
+    from models_light.faceboxes_xception_shfv2 import FaceBoxes
 
 img_dim = 1024 # only 1024 is supported
 rgb_mean = (98.13131, 98.13131, 98.13131) # bgr order

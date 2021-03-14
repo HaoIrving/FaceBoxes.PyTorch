@@ -42,6 +42,10 @@ parser.add_argument('-se', '--se', action="store_true", default=False, help=' ')
 parser.add_argument('-cbam', '--cbam', action="store_true", default=False, help=' ')
 parser.add_argument('-gcb', '--gcb', action="store_true", default=False, help=' ')
 parser.add_argument('-cda', '--coordatt', action="store_true", default=False, help=' ')
+parser.add_argument('-x', '--xception', action="store_true", default=False, help=' ')
+parser.add_argument('-mb', '--mobile', action="store_true", default=False, help=' ')
+parser.add_argument('-shf', '--shuffle', action="store_true", default=False, help=' ')
+
 args = parser.parse_args()
 
 
@@ -104,6 +108,13 @@ if __name__ == '__main__':
     if not os.path.exists(save_folder):
         os.mkdir(save_folder)
 
+    # args.shuffle=True
+    shuffle = args.shuffle
+    # args.mobile=True
+    mobile = args.mobile
+    # args.xception=True
+    xception = args.xception
+
     # args.coordatt=True
     coordatt = args.coordatt
     # args.gcb=True
@@ -125,6 +136,13 @@ if __name__ == '__main__':
     if coordatt:
         from models.faceboxes_coordatt import FaceBoxes
 
+    if xception:
+        from models_light.faceboxes_xception import FaceBoxes
+    if mobile:
+        from models_light.faceboxes_xception_mbv2 import FaceBoxes
+    if shuffle:
+        from models_light.faceboxes_xception_shfv2 import FaceBoxes
+        
     # args.cpu = True
     # args.show_image = True
     args.nms_threshold = 0.6  # nms
@@ -325,5 +343,5 @@ if __name__ == '__main__':
     legend  = ['ap', 'ap50', 'ap_small', 'ap_medium', 'ap_large']
     plot_map(save_folder, ap_stats, metrics, legend)
 
-    # txt_log = prefix + '/log.txt'
-    # plot_loss(save_folder, txt_log)
+    txt_log = prefix + '/log.txt'
+    plot_loss(save_folder, txt_log)

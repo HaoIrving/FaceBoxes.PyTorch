@@ -5,19 +5,32 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "test",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "env": {
+                "CUDA_VISIBLE_DEVICES": "2"
+            }
+        },
+        {
             "name": "train",
             "type": "python",
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
             "env": {
-                "CUDA_VISIBLE_DEVICES": "2"
+                "CUDA_VISIBLE_DEVICES": "1"
             },
-            "args":[
-                "--ngpu", "1",
-                "-b", "2",
-                "--num_workers", "0",
-                
+            "args": [
+                "--ngpu",
+                "1",
+                "-b",
+                "2",
+                "--num_workers",
+                "0",
             ]
         }
     ]
