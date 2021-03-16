@@ -6,9 +6,11 @@ import torch.optim as optim
 import torch.backends.cudnn as cudnn
 import argparse
 import torch.utils.data as data
-from data import AnnotationTransform, VOCDetection, detection_collate, preproc, cfg
+from data import AnnotationTransform, VOCDetection, detection_collate, cfg
+# from data.data_augment import preproc
+from data.data_augment_ssd import preproc
 from layers.modules import MultiBoxLoss
-from layers.functions.prior_box import PriorBox
+from layers.functions.prior_box import PriorBox, PriorBox_sar_old
 from models.faceboxes import FaceBoxes
 
 from utils.logger import Logger
@@ -37,6 +39,7 @@ parser.add_argument('-cda', '--coordatt', action="store_true", default=False, he
 parser.add_argument('-x', '--xception', action="store_true", default=False, help=' ')
 parser.add_argument('-mb', '--mobile', action="store_true", default=False, help=' ')
 parser.add_argument('-shf', '--shuffle', action="store_true", default=False, help=' ')
+parser.add_argument('-dcr', '--dsc_crelu', action="store_true", default=False, help=' ')
 args = parser.parse_args()
 
 if not os.path.exists(args.save_folder):
@@ -44,6 +47,8 @@ if not os.path.exists(args.save_folder):
 
 sys.stdout = Logger(os.path.join(args.save_folder, 'log.txt'))
 
+# args.dsc_crelu=True
+dsc_crelu = args.dsc_crelu
 # args.shuffle=True
 shuffle = args.shuffle
 # args.mobile=True
@@ -78,6 +83,8 @@ if mobile:
     from models_light.faceboxes_xception_mbv2 import FaceBoxes
 if shuffle:
     from models_light.faceboxes_xception_shfv2 import FaceBoxes
+if dsc_crelu:
+    from models_light.faceboxes_xception_DscCRelu import FaceBoxes
 
 img_dim = 1024 # only 1024 is supported
 rgb_mean = (98.13131, 98.13131, 98.13131) # bgr order
@@ -130,7 +137,8 @@ net = net.to(device)
 optimizer = optim.SGD(net.parameters(), lr=initial_lr, momentum=momentum, weight_decay=weight_decay)
 criterion = MultiBoxLoss(num_classes, 0.35, True, 0, True, 7, 0.35, False)
 
-priorbox = PriorBox(cfg, image_size=(img_dim, img_dim))
+# priorbox = PriorBox(cfg, image_size=(img_dim, img_dim))
+priorbox = PriorBox_sar_old(cfg, image_size=(img_dim, img_dim))
 with torch.no_grad():
     priors = priorbox.forward()
     priors = priors.to(device)

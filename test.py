@@ -103,6 +103,9 @@ if __name__ == '__main__':
     save_folder = os.path.join(args.save_folder, prefix.split('/')[-1])
     if not os.path.exists(save_folder):
         os.mkdir(save_folder)
+    from utils.logger import Logger
+    import sys
+    sys.stdout = Logger(os.path.join(save_folder, 'eval.txt'))
 
     # args.coordatt=True
     coordatt = args.coordatt
