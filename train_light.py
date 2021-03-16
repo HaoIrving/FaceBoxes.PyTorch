@@ -6,7 +6,9 @@ import torch.optim as optim
 import torch.backends.cudnn as cudnn
 import argparse
 import torch.utils.data as data
-from data import AnnotationTransform, VOCDetection, detection_collate, preproc, cfg
+from data import AnnotationTransform, VOCDetection, detection_collate, cfg
+# from data.data_augment import preproc
+from data.data_augment_ssd import preproc
 from layers.modules import MultiBoxLoss
 from layers.functions.prior_box import PriorBox
 from models.faceboxes import FaceBoxes
@@ -37,6 +39,7 @@ parser.add_argument('-cda', '--coordatt', action="store_true", default=False, he
 parser.add_argument('-x', '--xception', action="store_true", default=False, help=' ')
 parser.add_argument('-mb', '--mobile', action="store_true", default=False, help=' ')
 parser.add_argument('-shf', '--shuffle', action="store_true", default=False, help=' ')
+parser.add_argument('-dcr', '--dsc_crelu', action="store_true", default=False, help=' ')
 args = parser.parse_args()
 
 if not os.path.exists(args.save_folder):
@@ -44,6 +47,8 @@ if not os.path.exists(args.save_folder):
 
 sys.stdout = Logger(os.path.join(args.save_folder, 'log.txt'))
 
+# args.dsc_crelu=True
+dsc_crelu = args.dsc_crelu
 # args.shuffle=True
 shuffle = args.shuffle
 # args.mobile=True
@@ -78,6 +83,8 @@ if mobile:
     from models_light.faceboxes_xception_mbv2 import FaceBoxes
 if shuffle:
     from models_light.faceboxes_xception_shfv2 import FaceBoxes
+if dsc_crelu:
+    from models_light.faceboxes_xception_DscCRelu import FaceBoxes
 
 img_dim = 1024 # only 1024 is supported
 rgb_mean = (98.13131, 98.13131, 98.13131) # bgr order

@@ -6,7 +6,9 @@ import torch.optim as optim
 import torch.backends.cudnn as cudnn
 import argparse
 import torch.utils.data as data
-from data import AnnotationTransform, VOCDetection, detection_collate, preproc, cfg
+from data import AnnotationTransform, VOCDetection, detection_collate, cfg
+# from data.data_augment import preproc
+from data.data_augment_ssd import preproc
 from layers.modules import MultiBoxLoss
 from layers.functions.prior_box import PriorBox
 from models.faceboxes import FaceBoxes

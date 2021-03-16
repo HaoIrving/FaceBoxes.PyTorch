@@ -45,6 +45,7 @@ parser.add_argument('-cda', '--coordatt', action="store_true", default=False, he
 parser.add_argument('-x', '--xception', action="store_true", default=False, help=' ')
 parser.add_argument('-mb', '--mobile', action="store_true", default=False, help=' ')
 parser.add_argument('-shf', '--shuffle', action="store_true", default=False, help=' ')
+parser.add_argument('-dcr', '--dsc_crelu', action="store_true", default=False, help=' ')
 
 args = parser.parse_args()
 
@@ -107,7 +108,12 @@ if __name__ == '__main__':
     save_folder = os.path.join(args.save_folder, prefix.split('/')[-1])
     if not os.path.exists(save_folder):
         os.mkdir(save_folder)
+    from utils.logger import Logger
+    import sys
+    sys.stdout = Logger(os.path.join(save_folder, 'eval.txt'))
 
+    # args.dsc_crelu=True
+    dsc_crelu = args.dsc_crelu
     # args.shuffle=True
     shuffle = args.shuffle
     # args.mobile=True
@@ -142,7 +148,10 @@ if __name__ == '__main__':
         from models_light.faceboxes_xception_mbv2 import FaceBoxes
     if shuffle:
         from models_light.faceboxes_xception_shfv2 import FaceBoxes
-        
+    if dsc_crelu:
+        from models_light.faceboxes_xception_DscCRelu import FaceBoxes
+
+
     # args.cpu = True
     # args.show_image = True
     args.nms_threshold = 0.6  # nms
@@ -191,13 +200,13 @@ if __name__ == '__main__':
 
     ap_stats = {"ap":[], "ap50": [], "ap75": [], "ap_small": [], "ap_medium": [], "ap_large": [], "epoch": []}
 
-    # start_epoch = 200; step = 5
     start_epoch = 10; step = 10
+    start_epoch = 200; step = 5
     ToBeTested = []
-    # ToBeTested = [prefix + f'/FaceBoxes_epoch_{epoch}.pth' for epoch in range(start_epoch, 300, step)]
-    # ToBeTested.append(prefix + '/Final_FaceBoxes.pth') # 68.5
-    ToBeTested = [prefix + f'FaceBoxes_epoch_{epoch}.pth' for epoch in range(start_epoch, 300, step)]
-    ToBeTested.append(prefix + 'Final_FaceBoxes.pth') # 68.5
+    ToBeTested = [prefix + f'/FaceBoxes_epoch_{epoch}.pth' for epoch in range(start_epoch, 300, step)]
+    ToBeTested.append(prefix + '/Final_FaceBoxes.pth') # 68.5
+    # ToBeTested = [prefix + f'FaceBoxes_epoch_{epoch}.pth' for epoch in range(start_epoch, 300, step)]
+    # ToBeTested.append(prefix + 'Final_FaceBoxes.pth') # 68.5
     # ToBeTested.append(prefix + 'Final_FaceBoxes.pth') # 68.5
     for index, model_path in enumerate(ToBeTested):
         args.trained_model = model_path
