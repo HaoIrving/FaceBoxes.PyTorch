@@ -101,13 +101,24 @@ class FaceBoxes(nn.Module):
   def multibox(self, num_classes):
     loc_layers = []
     conf_layers = []
-    loc_layers += [nn.Conv2d(128, 21 * 4, kernel_size=3, padding=1)]
-    conf_layers += [nn.Conv2d(128, 21 * num_classes, kernel_size=3, padding=1)]
-    loc_layers += [nn.Conv2d(256, 1 * 4, kernel_size=3, padding=1)]
-    conf_layers += [nn.Conv2d(256, 1 * num_classes, kernel_size=3, padding=1)]
-    loc_layers += [nn.Conv2d(256, 1 * 4, kernel_size=3, padding=1)]
-    conf_layers += [nn.Conv2d(256, 1 * num_classes, kernel_size=3, padding=1)]
+    loc_layers += [nn.Conv2d(128, 3* 21 * 4, kernel_size=3, padding=1)]
+    conf_layers += [nn.Conv2d(128, 3 * 21 * num_classes, kernel_size=3, padding=1)]
+    loc_layers += [nn.Conv2d(256, 3 * 4, kernel_size=3, padding=1)]
+    conf_layers += [nn.Conv2d(256, 3 * num_classes, kernel_size=3, padding=1)]
+    loc_layers += [nn.Conv2d(256, 3 * 4, kernel_size=3, padding=1)]
+    conf_layers += [nn.Conv2d(256, 3 * num_classes, kernel_size=3, padding=1)]
     return nn.Sequential(*loc_layers), nn.Sequential(*conf_layers)
+
+  # def multibox(self, num_classes):
+  #   loc_layers = []
+  #   conf_layers = []
+  #   loc_layers += [nn.Conv2d(128, 21 * 4, kernel_size=3, padding=1)]
+  #   conf_layers += [nn.Conv2d(128, 21 * num_classes, kernel_size=3, padding=1)]
+  #   loc_layers += [nn.Conv2d(256, 1 * 4, kernel_size=3, padding=1)]
+  #   conf_layers += [nn.Conv2d(256, 1 * num_classes, kernel_size=3, padding=1)]
+  #   loc_layers += [nn.Conv2d(256, 1 * 4, kernel_size=3, padding=1)]
+  #   conf_layers += [nn.Conv2d(256, 1 * num_classes, kernel_size=3, padding=1)]
+  #   return nn.Sequential(*loc_layers), nn.Sequential(*conf_layers)
 
   def forward(self, x):
 

@@ -10,7 +10,7 @@ from data import AnnotationTransform, VOCDetection, detection_collate, cfg
 # from data.data_augment import preproc
 from data.data_augment_ssd import preproc
 from layers.modules import MultiBoxLoss
-from layers.functions.prior_box import PriorBox
+from layers.functions.prior_box import PriorBox, PriorBox_sar_old
 from models.faceboxes import FaceBoxes
 
 from utils.logger import Logger
@@ -116,7 +116,8 @@ net = net.to(device)
 optimizer = optim.SGD(net.parameters(), lr=initial_lr, momentum=momentum, weight_decay=weight_decay)
 criterion = MultiBoxLoss(num_classes, 0.35, True, 0, True, 7, 0.35, False)
 
-priorbox = PriorBox(cfg, image_size=(img_dim, img_dim))
+# priorbox = PriorBox(cfg, image_size=(img_dim, img_dim))
+priorbox = PriorBox_sar_old(cfg, image_size=(img_dim, img_dim))
 with torch.no_grad():
     priors = priorbox.forward()
     priors = priors.to(device)

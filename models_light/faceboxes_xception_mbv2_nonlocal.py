@@ -2,7 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from .lib.xception import Block as XBlock
-from .lib.shufflev2 import InvertedResidual as ShfBlock
+from .lib.mobilev2 import InvertedResidual as MBlock
+from .lib.non_local_embedded_gaussian import NONLocalBlock2D
 
 class BasicConv2d(nn.Module):
 
@@ -75,14 +76,19 @@ class FaceBoxes(nn.Module):
     repeat = 3
 
     self.xception1 = XBlock(128, 128, repeat, 1, start_with_relu=False,grow_first=True)
+    self.nl1 = NONLocalBlock2D(128)
     self.xception2 = XBlock(128, 128, repeat, 1, start_with_relu=True,grow_first=True)
+    self.nl2 = NONLocalBlock2D(128)
     self.xception3 = XBlock(128, 128, repeat, 1, start_with_relu=True,grow_first=True)
+    self.nl3 = NONLocalBlock2D(128)
 
-    self.shuffle1 = ShfBlock(128, 256, 2)
-    self.shuffle2 = ShfBlock(256, 256, 1)
+    self.mobile1 = MBlock(128, 128, 2, 6)
+    self.mobile2 = MBlock(128, 256, 1, 6)
+    self.nl4 = NONLocalBlock2D(256)
 
-    self.shuffle3 = ShfBlock(256, 256, 2)
-    self.shuffle4 = ShfBlock(256, 256, 1)
+    self.mobile3 = MBlock(256, 128, 2, 6)
+    self.mobile4 = MBlock(128, 256, 1, 6)
+    self.nl5 = NONLocalBlock2D(256)
 
     self.loc, self.conf = self.multibox(self.num_classes)
 
@@ -134,16 +140,21 @@ class FaceBoxes(nn.Module):
     x = self.conv2(x)
     x = F.max_pool2d(x, kernel_size=3, stride=2, padding=1)
     x = self.xception1(x)
+    x = self.nl1(x)
     x = self.xception2(x)
+    x = self.nl2(x)
     x = self.xception3(x)
+    x = self.nl3(x)
     detection_sources.append(x)
 
-    x = self.shuffle1(x)
-    x = self.shuffle2(x)
+    x = self.mobile1(x)
+    x = self.mobile2(x)
+    x = self.nl4(x)
     detection_sources.append(x)
 
-    x = self.shuffle3(x)
-    x = self.shuffle4(x)
+    x = self.mobile3(x)
+    x = self.mobile4(x)
+    x = self.nl5(x)
     detection_sources.append(x)
 
     for (x, l, c) in zip(detection_sources, self.loc, self.conf):

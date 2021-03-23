@@ -8,7 +8,7 @@ import json
 
 from data import cfg
 from layers.functions.prior_box import PriorBox, PriorBox_sar, PriorBox_sar_old
-from utils.nms_wrapper import nms
+from utils.nms_wrapper import nms, soft_nms
 #from utils.nms.py_cpu_nms import py_cpu_nms
 import cv2
 from models.faceboxes import FaceBoxes
@@ -44,6 +44,7 @@ parser.add_argument('-gcb', '--gcb', action="store_true", default=False, help=' 
 parser.add_argument('-cda', '--coordatt', action="store_true", default=False, help=' ')
 parser.add_argument('-x', '--xception', action="store_true", default=False, help=' ')
 parser.add_argument('-mb', '--mobile', action="store_true", default=False, help=' ')
+parser.add_argument('-mbv1', '--mobilev1', action="store_true", default=False, help=' ')
 parser.add_argument('-shf', '--shuffle', action="store_true", default=False, help=' ')
 parser.add_argument('-dcr', '--dsc_crelu', action="store_true", default=False, help=' ')
 
@@ -118,6 +119,8 @@ if __name__ == '__main__':
     shuffle = args.shuffle
     # args.mobile=True
     mobile = args.mobile
+    # args.mobilev1=True
+    mobilev1 = args.mobilev1
     # args.xception=True
     xception = args.xception
 
@@ -132,20 +135,22 @@ if __name__ == '__main__':
     # args.non_local=True
     non_local = args.non_local
     if non_local:
-        from models.faceboxes_nonlocal import FaceBoxes
+        from models_light.faceboxes_xception_mbv2_nonlocal import FaceBoxes
     if se:
-        from models.faceboxes_se import FaceBoxes
+        from models_light.faceboxes_xception_mbv2_se import FaceBoxes
     if cbam:
-        from models.faceboxes_cbam import FaceBoxes
+        from models_light.faceboxes_xception_mbv2_cbam import FaceBoxes
     if gcb:
-        from models.faceboxes_gcb import FaceBoxes
+        from models_light.faceboxes_xception_mbv2_gcb import FaceBoxes
     if coordatt:
-        from models.faceboxes_coordatt import FaceBoxes
+        from models_light.faceboxes_xception_mbv2_coordatt import FaceBoxes
 
     if xception:
         from models_light.faceboxes_xception import FaceBoxes
     if mobile:
         from models_light.faceboxes_xception_mbv2 import FaceBoxes
+    if mobilev1:
+        from models_light.faceboxes_xception_mbv1 import FaceBoxes
     if shuffle:
         from models_light.faceboxes_xception_shfv2 import FaceBoxes
     if dsc_crelu:
@@ -205,6 +210,7 @@ if __name__ == '__main__':
     ToBeTested = []
     ToBeTested = [prefix + f'/FaceBoxes_epoch_{epoch}.pth' for epoch in range(start_epoch, 300, step)]
     ToBeTested.append(prefix + '/Final_FaceBoxes.pth') # 68.5
+    # ToBeTested.append(prefix + '/FaceBoxes_epoch_220.pth') # 68.5
     # ToBeTested = [prefix + f'FaceBoxes_epoch_{epoch}.pth' for epoch in range(start_epoch, 300, step)]
     # ToBeTested.append(prefix + 'Final_FaceBoxes.pth') # 68.5
     # ToBeTested.append(prefix + 'Final_FaceBoxes.pth') # 68.5
@@ -266,8 +272,8 @@ if __name__ == '__main__':
             # do NMS
             dets = np.hstack((boxes, scores[:, np.newaxis])).astype(np.float32, copy=False)
             #keep = py_cpu_nms(dets, args.nms_threshold)
-            keep = nms(dets, args.nms_threshold,force_cpu=args.cpu)
-            # keep = soft_nms(dets, sigma=0.5, Nt=args.nms_threshold, threshold=args.confidence_threshold, method=1)  # higher performance
+            # keep = nms(dets, args.nms_threshold,force_cpu=args.cpu)
+            keep = soft_nms(dets, sigma=0.5, Nt=args.nms_threshold, threshold=args.confidence_threshold, method=1)  # higher performance
             dets = dets[keep, :]
 
             # keep top-K faster NMS
@@ -324,7 +330,7 @@ if __name__ == '__main__':
             print("copypaste: Task: {}".format(task))
             print("copypaste: " + ",".join([k[0] for k in important_res]))
             print("copypaste: " + ",".join(["{0:.4f}".format(k[1]) for k in important_res]))
-        print("\nAP50: {}, FPS: {}\n".format(results['bbox']['AP50'], 1 / _t['forward_pass'].average_time))
+        print("\nFPS: {}".format(1 / _t['forward_pass'].average_time))
         
         ap_stats['ap'].append(results['bbox']['AP'])
         ap_stats['ap50'].append(results['bbox']['AP50'])

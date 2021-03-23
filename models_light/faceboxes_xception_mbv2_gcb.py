@@ -2,7 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from .lib.xception import Block as XBlock
-from .lib.shufflev2 import InvertedResidual as ShfBlock
+from .lib.mobilev2 import InvertedResidual as MBlock
+from .lib.context_block import ContextBlock
 
 class BasicConv2d(nn.Module):
 
@@ -75,14 +76,19 @@ class FaceBoxes(nn.Module):
     repeat = 3
 
     self.xception1 = XBlock(128, 128, repeat, 1, start_with_relu=False,grow_first=True)
+    self.gcb1 = ContextBlock(128, 1. / 4)  # or 16, 4 is slow but more accurate.
     self.xception2 = XBlock(128, 128, repeat, 1, start_with_relu=True,grow_first=True)
+    self.gcb2 = ContextBlock(128, 1. / 4)  # or 16, 4 is slow but more accurate.
     self.xception3 = XBlock(128, 128, repeat, 1, start_with_relu=True,grow_first=True)
+    self.gcb3 = ContextBlock(128, 1. / 4)  # or 16, 4 is slow but more accurate.
 
-    self.shuffle1 = ShfBlock(128, 256, 2)
-    self.shuffle2 = ShfBlock(256, 256, 1)
+    self.mobile1 = MBlock(128, 128, 2, 6)
+    self.mobile2 = MBlock(128, 256, 1, 6)
+    self.gcb4 = ContextBlock(256, 1. / 4)  # or 16, 4 is slow but more accurate.
 
-    self.shuffle3 = ShfBlock(256, 256, 2)
-    self.shuffle4 = ShfBlock(256, 256, 1)
+    self.mobile3 = MBlock(256, 128, 2, 6)
+    self.mobile4 = MBlock(128, 256, 1, 6)
+    self.gcb5 = ContextBlock(256, 1. / 4)  # or 16, 4 is slow but more accurate.
 
     self.loc, self.conf = self.multibox(self.num_classes)
 
@@ -134,16 +140,21 @@ class FaceBoxes(nn.Module):
     x = self.conv2(x)
     x = F.max_pool2d(x, kernel_size=3, stride=2, padding=1)
     x = self.xception1(x)
+    x = self.gcb1(x)
     x = self.xception2(x)
+    x = self.gcb2(x)
     x = self.xception3(x)
+    x = self.gcb3(x)
     detection_sources.append(x)
 
-    x = self.shuffle1(x)
-    x = self.shuffle2(x)
+    x = self.mobile1(x)
+    x = self.mobile2(x)
+    x = self.gcb4(x)
     detection_sources.append(x)
 
-    x = self.shuffle3(x)
-    x = self.shuffle4(x)
+    x = self.mobile3(x)
+    x = self.mobile4(x)
+    x = self.gcb5(x)
     detection_sources.append(x)
 
     for (x, l, c) in zip(detection_sources, self.loc, self.conf):

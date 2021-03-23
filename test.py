@@ -7,7 +7,7 @@ import numpy as np
 import json
 
 from data import cfg
-from layers.functions.prior_box import PriorBox, PriorBox_sar
+from layers.functions.prior_box import PriorBox, PriorBox_sar_old
 from utils.nms_wrapper import nms
 #from utils.nms.py_cpu_nms import py_cpu_nms
 import cv2
@@ -176,13 +176,13 @@ if __name__ == '__main__':
 
     ap_stats = {"ap":[], "ap50": [], "ap75": [], "ap_small": [], "ap_medium": [], "ap_large": [], "epoch": []}
 
-    # start_epoch = 200; step = 5
-    start_epoch = 10; step = 10
+    start_epoch = 200; step = 5
+    # start_epoch = 10; step = 10
     ToBeTested = []
-    # ToBeTested = [prefix + f'/FaceBoxes_epoch_{epoch}.pth' for epoch in range(start_epoch, 300, step)]
-    # ToBeTested.append(prefix + '/Final_FaceBoxes.pth') # 68.5
-    ToBeTested = [prefix + f'FaceBoxes_epoch_{epoch}.pth' for epoch in range(start_epoch, 300, step)]
-    ToBeTested.append(prefix + 'Final_FaceBoxes.pth') # 68.5
+    ToBeTested = [prefix + f'/FaceBoxes_epoch_{epoch}.pth' for epoch in range(start_epoch, 300, step)]
+    ToBeTested.append(prefix + '/Final_FaceBoxes.pth') # 68.5
+    # ToBeTested = [prefix + f'FaceBoxes_epoch_{epoch}.pth' for epoch in range(start_epoch, 300, step)]
+    # ToBeTested.append(prefix + 'Final_FaceBoxes.pth') # 68.5
     # ToBeTested.append(prefix + 'Final_FaceBoxes.pth') # 68.5
     for index, model_path in enumerate(ToBeTested):
         args.trained_model = model_path
@@ -219,8 +219,8 @@ if __name__ == '__main__':
             loc, conf = net(im)  # forward pass
             _t['forward_pass'].toc()
             _t['misc'].tic()
-            priorbox = PriorBox(cfg, image_size=(im_height, im_width))
-            # priorbox = PriorBox_sar(cfg, image_size=(im_height, im_width))
+            # priorbox = PriorBox(cfg, image_size=(im_height, im_width))
+            priorbox = PriorBox_sar_old(cfg, image_size=(im_height, im_width))
             priors = priorbox.forward()
             priors = priors.to(device)
             prior_data = priors.data
@@ -300,7 +300,7 @@ if __name__ == '__main__':
             print("copypaste: Task: {}".format(task))
             print("copypaste: " + ",".join([k[0] for k in important_res]))
             print("copypaste: " + ",".join(["{0:.4f}".format(k[1]) for k in important_res]))
-        print("\nAP50: {}, FPS: {}\n".format(results['bbox']['AP50'], 1 / _t['forward_pass'].average_time))
+        print("\nFPS: {}".format(1 / _t['forward_pass'].average_time))
         
         ap_stats['ap'].append(results['bbox']['AP'])
         ap_stats['ap50'].append(results['bbox']['AP50'])

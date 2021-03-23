@@ -72,9 +72,11 @@ class FaceBoxes(nn.Module):
     self.conv1 = CRelu(3, 24, kernel_size=7, stride=4, padding=3)
     self.conv2 = CRelu(48, 64, kernel_size=5, stride=2, padding=2)
 
-    self.xception1 = XBlock(128, 128, 2, 1, start_with_relu=False,grow_first=True)
-    self.xception2 = XBlock(128, 128, 2, 1, start_with_relu=True,grow_first=True)
-    self.xception3 = XBlock(128, 128, 2, 1, start_with_relu=True,grow_first=True)
+    repeat = 3
+
+    self.xception1 = XBlock(128, 128, repeat, 1, start_with_relu=False,grow_first=True)
+    self.xception2 = XBlock(128, 128, repeat, 1, start_with_relu=True,grow_first=True)
+    self.xception3 = XBlock(128, 128, repeat, 1, start_with_relu=True,grow_first=True)
 
     self.mobile1 = MBlock(128, 128, 2, 6)
     self.mobile2 = MBlock(128, 256, 1, 6)

@@ -38,6 +38,7 @@ parser.add_argument('-gcb', '--gcb', action="store_true", default=False, help=' 
 parser.add_argument('-cda', '--coordatt', action="store_true", default=False, help=' ')
 parser.add_argument('-x', '--xception', action="store_true", default=False, help=' ')
 parser.add_argument('-mb', '--mobile', action="store_true", default=False, help=' ')
+parser.add_argument('-mbv1', '--mobilev1', action="store_true", default=False, help=' ')
 parser.add_argument('-shf', '--shuffle', action="store_true", default=False, help=' ')
 parser.add_argument('-dcr', '--dsc_crelu', action="store_true", default=False, help=' ')
 args = parser.parse_args()
@@ -51,6 +52,8 @@ sys.stdout = Logger(os.path.join(args.save_folder, 'log.txt'))
 dsc_crelu = args.dsc_crelu
 # args.shuffle=True
 shuffle = args.shuffle
+# args.mobile=True
+mobilev1 = args.mobilev1
 # args.mobile=True
 mobile = args.mobile
 # args.xception=True
@@ -67,20 +70,22 @@ se = args.se
 # args.non_local=True
 non_local = args.non_local
 if non_local:
-    from models.faceboxes_nonlocal import FaceBoxes
+    from models_light.faceboxes_xception_mbv2_nonlocal import FaceBoxes
 if se:
-    from models.faceboxes_se import FaceBoxes
+    from models_light.faceboxes_xception_mbv2_se import FaceBoxes
 if cbam:
-    from models.faceboxes_cbam import FaceBoxes
+    from models_light.faceboxes_xception_mbv2_cbam import FaceBoxes
 if gcb:
-    from models.faceboxes_gcb import FaceBoxes
+    from models_light.faceboxes_xception_mbv2_gcb import FaceBoxes
 if coordatt:
-    from models.faceboxes_coordatt import FaceBoxes
+    from models_light.faceboxes_xception_mbv2_coordatt import FaceBoxes
 
 if xception:
     from models_light.faceboxes_xception import FaceBoxes
 if mobile:
     from models_light.faceboxes_xception_mbv2 import FaceBoxes
+if mobilev1:
+    from models_light.faceboxes_xception_mbv1 import FaceBoxes
 if shuffle:
     from models_light.faceboxes_xception_shfv2 import FaceBoxes
 if dsc_crelu:

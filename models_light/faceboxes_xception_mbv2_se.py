@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from .lib.xception import Block as XBlock
-from .lib.shufflev2 import InvertedResidual as ShfBlock
+from .lib.mobilev2 import InvertedResidual as MBlock
 
 class BasicConv2d(nn.Module):
 
@@ -61,6 +61,24 @@ class CRelu(nn.Module):
     return x
 
 
+class SELayer(nn.Module):
+    def __init__(self, channel, reduction=16):
+        super(SELayer, self).__init__()
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.fc = nn.Sequential(
+                nn.Linear(channel, channel // reduction),
+                nn.ReLU(inplace=True),
+                nn.Linear(channel // reduction, channel),
+                nn.Sigmoid()
+        )
+
+    def forward(self, x):
+        b, c, _, _ = x.size()
+        y = self.avg_pool(x).view(b, c)
+        y = self.fc(y).view(b, c, 1, 1)
+        return x * y
+
+
 class FaceBoxes(nn.Module):
 
   def __init__(self, phase, size, num_classes):
@@ -75,14 +93,19 @@ class FaceBoxes(nn.Module):
     repeat = 3
 
     self.xception1 = XBlock(128, 128, repeat, 1, start_with_relu=False,grow_first=True)
+    self.se1 = SELayer(128)
     self.xception2 = XBlock(128, 128, repeat, 1, start_with_relu=True,grow_first=True)
+    self.se2 = SELayer(128)
     self.xception3 = XBlock(128, 128, repeat, 1, start_with_relu=True,grow_first=True)
+    self.se3 = SELayer(128)
 
-    self.shuffle1 = ShfBlock(128, 256, 2)
-    self.shuffle2 = ShfBlock(256, 256, 1)
+    self.mobile1 = MBlock(128, 128, 2, 6)
+    self.mobile2 = MBlock(128, 256, 1, 6)
+    self.se4 = SELayer(256)
 
-    self.shuffle3 = ShfBlock(256, 256, 2)
-    self.shuffle4 = ShfBlock(256, 256, 1)
+    self.mobile3 = MBlock(256, 128, 2, 6)
+    self.mobile4 = MBlock(128, 256, 1, 6)
+    self.se5 = SELayer(256)
 
     self.loc, self.conf = self.multibox(self.num_classes)
 
@@ -134,16 +157,21 @@ class FaceBoxes(nn.Module):
     x = self.conv2(x)
     x = F.max_pool2d(x, kernel_size=3, stride=2, padding=1)
     x = self.xception1(x)
+    x = self.se1(x)
     x = self.xception2(x)
+    x = self.se2(x)
     x = self.xception3(x)
+    x = self.se3(x)
     detection_sources.append(x)
 
-    x = self.shuffle1(x)
-    x = self.shuffle2(x)
+    x = self.mobile1(x)
+    x = self.mobile2(x)
+    x = self.se4(x)
     detection_sources.append(x)
 
-    x = self.shuffle3(x)
-    x = self.shuffle4(x)
+    x = self.mobile3(x)
+    x = self.mobile4(x)
+    x = self.se5(x)
     detection_sources.append(x)
 
     for (x, l, c) in zip(detection_sources, self.loc, self.conf):

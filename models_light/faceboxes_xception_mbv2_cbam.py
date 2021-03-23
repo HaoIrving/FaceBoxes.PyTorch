@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from .lib.xception import Block as XBlock
-from .lib.shufflev2 import InvertedResidual as ShfBlock
+from .lib.mobilev2 import InvertedResidual as MBlock
 
 class BasicConv2d(nn.Module):
 
@@ -61,6 +61,45 @@ class CRelu(nn.Module):
     return x
 
 
+class CBAM_Module(nn.Module):
+
+    def __init__(self, channels, reduction=16):
+        super(CBAM_Module, self).__init__()
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.max_pool = nn.AdaptiveMaxPool2d(1)
+        self.fc1 = nn.Conv2d(channels, channels // reduction, kernel_size=1,
+                             padding=0)
+        self.relu = nn.ReLU(inplace=True)
+        self.fc2 = nn.Conv2d(channels // reduction, channels, kernel_size=1,
+                             padding=0)
+        self.sigmoid_channel = nn.Sigmoid()
+        self.conv_after_concat = nn.Conv2d(2, 1, kernel_size = 7, stride=1, padding = 3)
+        self.sigmoid_spatial = nn.Sigmoid()
+
+    def forward(self, x):
+        module_input = x
+        avg = self.avg_pool(x)
+        mx = self.max_pool(x)
+        avg = self.fc1(avg)
+        mx = self.fc1(mx)
+        avg = self.relu(avg)
+        mx = self.relu(mx)
+        avg = self.fc2(avg)
+        mx = self.fc2(mx)
+        x = avg + mx
+        x = self.sigmoid_channel(x)
+        x = module_input * x
+
+        module_input = x
+        avg = torch.mean(x, 1, True)
+        mx, _ = torch.max(x, 1, True)
+        x = torch.cat((avg, mx), 1)
+        x = self.conv_after_concat(x)
+        x = self.sigmoid_spatial(x)
+        x = module_input * x
+        return x
+
+
 class FaceBoxes(nn.Module):
 
   def __init__(self, phase, size, num_classes):
@@ -75,14 +114,19 @@ class FaceBoxes(nn.Module):
     repeat = 3
 
     self.xception1 = XBlock(128, 128, repeat, 1, start_with_relu=False,grow_first=True)
+    self.cbam1 = CBAM_Module(128)
     self.xception2 = XBlock(128, 128, repeat, 1, start_with_relu=True,grow_first=True)
+    self.cbam2 = CBAM_Module(128)
     self.xception3 = XBlock(128, 128, repeat, 1, start_with_relu=True,grow_first=True)
+    self.cbam3 = CBAM_Module(128)
 
-    self.shuffle1 = ShfBlock(128, 256, 2)
-    self.shuffle2 = ShfBlock(256, 256, 1)
+    self.mobile1 = MBlock(128, 128, 2, 6)
+    self.mobile2 = MBlock(128, 256, 1, 6)
+    self.cbam4 = CBAM_Module(256)
 
-    self.shuffle3 = ShfBlock(256, 256, 2)
-    self.shuffle4 = ShfBlock(256, 256, 1)
+    self.mobile3 = MBlock(256, 128, 2, 6)
+    self.mobile4 = MBlock(128, 256, 1, 6)
+    self.cbam5 = CBAM_Module(256)
 
     self.loc, self.conf = self.multibox(self.num_classes)
 
@@ -134,16 +178,21 @@ class FaceBoxes(nn.Module):
     x = self.conv2(x)
     x = F.max_pool2d(x, kernel_size=3, stride=2, padding=1)
     x = self.xception1(x)
+    x = self.cbam1(x)
     x = self.xception2(x)
+    x = self.cbam2(x)
     x = self.xception3(x)
+    x = self.cbam3(x)
     detection_sources.append(x)
 
-    x = self.shuffle1(x)
-    x = self.shuffle2(x)
+    x = self.mobile1(x)
+    x = self.mobile2(x)
+    x = self.cbam4(x)
     detection_sources.append(x)
 
-    x = self.shuffle3(x)
-    x = self.shuffle4(x)
+    x = self.mobile3(x)
+    x = self.mobile4(x)
+    x = self.cbam5(x)
     detection_sources.append(x)
 
     for (x, l, c) in zip(detection_sources, self.loc, self.conf):

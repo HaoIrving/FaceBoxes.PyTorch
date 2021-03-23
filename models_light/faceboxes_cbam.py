@@ -88,6 +88,7 @@ class CBAM_Module(nn.Module):
         x = avg + mx
         x = self.sigmoid_channel(x)
         x = module_input * x
+        
         module_input = x
         avg = torch.mean(x, 1, True)
         mx, _ = torch.max(x, 1, True)
