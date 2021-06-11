@@ -73,15 +73,15 @@ se = args.se
 # args.non_local=True
 non_local = args.non_local
 if non_local:
-    from models_light.faceboxes_xception_mbv2_nonlocal import FaceBoxes
+    from models_light_xcp.faceboxes_xception_xcp_nonlocal import FaceBoxes
 if se:
-    from models_light.faceboxes_xception_mbv2_se import FaceBoxes
+    from models_light_xcp.faceboxes_xception_xcp_se import FaceBoxes
 if cbam:
-    from models_light.faceboxes_xception_mbv2_cbam import FaceBoxes
+    from models_light_xcp.faceboxes_xception_xcp_cbam import FaceBoxes
 if gcb:
-    from models_light.faceboxes_xception_mbv2_gcb import FaceBoxes
+    from models_light_xcp.faceboxes_xception_xcp_gcb import FaceBoxes
 if coordatt:
-    from models_light.faceboxes_xception_mbv2_coordatt import FaceBoxes
+    from models_light_xcp.faceboxes_xception_xcp_coordatt import FaceBoxes
 
 if xception:
     from models_light.faceboxes_xception import FaceBoxes

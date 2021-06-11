@@ -139,15 +139,15 @@ if __name__ == '__main__':
     # args.non_local=True
     non_local = args.non_local
     if non_local:
-        from models_light.faceboxes_xception_mbv2_nonlocal import FaceBoxes
+        from models_light_xcp.faceboxes_xception_xcp_nonlocal import FaceBoxes
     if se:
-        from models_light.faceboxes_xception_mbv2_se import FaceBoxes
+        from models_light_xcp.faceboxes_xception_xcp_se import FaceBoxes
     if cbam:
-        from models_light.faceboxes_xception_mbv2_cbam import FaceBoxes
+        from models_light_xcp.faceboxes_xception_xcp_cbam import FaceBoxes
     if gcb:
-        from models_light.faceboxes_xception_mbv2_gcb import FaceBoxes
+        from models_light_xcp.faceboxes_xception_xcp_gcb import FaceBoxes
     if coordatt:
-        from models_light.faceboxes_xception_mbv2_coordatt import FaceBoxes
+        from models_light_xcp.faceboxes_xception_xcp_coordatt import FaceBoxes
 
     if xception:
         from models_light.faceboxes_xception import FaceBoxes
@@ -217,6 +217,7 @@ if __name__ == '__main__':
     start_epoch = 200; step = 5; end_epoch = args.eepoch
     ToBeTested = []
     # ToBeTested = [prefix + f'/FaceBoxes_epoch_{epoch}.pth' for epoch in range(start_epoch, 300, step)]
+    # ToBeTested.append(prefix + '/Final_FaceBoxes.pth') # 68.5
     if end_epoch == 'final':
         ToBeTested.append(prefix + '/Final_FaceBoxes.pth') # 68.5
     else:
@@ -224,7 +225,6 @@ if __name__ == '__main__':
     # ToBeTested = [prefix + f'FaceBoxes_epoch_{epoch}.pth' for epoch in range(start_epoch, 300, step)]
     # ToBeTested.append(prefix + 'Final_FaceBoxes.pth') # 68.5
     # ToBeTested.append(prefix + 'Final_FaceBoxes.pth') # 68.5
-    # ToBeTested *= 5
     for index, model_path in enumerate(ToBeTested):
         args.trained_model = model_path
         net = load_model(net, args.trained_model, args.cpu)
@@ -250,6 +250,7 @@ if __name__ == '__main__':
             scale = scale.to(device)
             im = np.float32(im_raw)
             im = cv2.resize(im, None, None, fx=target_size/w, fy=target_size/h, interpolation=cv2.INTER_LINEAR)
+            im_gt = im.copy()
             im_height, im_width, _ = im.shape
             im -= MEANS
             im = im.transpose(2, 0, 1)
@@ -318,18 +319,45 @@ if __name__ == '__main__':
                 visualizer = Visualizer(im_draw, metadata=sar_metadata, scale=1)
                 out = visualizer.draw_dataset_dict(d)
                 im_gt = out.get_image()
-                for b in dets:
-                    if b[4] < args.vis_thres:
-                        continue
-                    text = "{:.4f}".format(b[4])
-                    b = list(map(int, b))
-                    cv2.rectangle(im_gt, (b[0], b[1]), (b[2], b[3]), (0, 0, 255), 2)
-                    cx = b[0]
-                    cy = b[1] + 12
-                    cv2.putText(im_gt, text, (cx, cy),
-                                cv2.FONT_HERSHEY_DUPLEX, 0.5, (255, 255, 255))
-                cv2.imshow('res', im_gt)
-                cv2.waitKey(0)
+                # for b in dets:
+                #     if b[4] < args.vis_thres:
+                #         continue
+                #     text = "{:.4f}".format(b[4])
+                #     b = list(map(int, b))
+                #     cv2.rectangle(im_gt, (b[0], b[1]), (b[2], b[3]), (0, 0, 255), 2)
+                #     cx = b[0]
+                #     cy = b[1] + 12
+                #     cv2.putText(im_gt, text, (cx, cy),
+                #                 cv2.FONT_HERSHEY_DUPLEX, 0.5, (255, 255, 255))
+
+                # im_gt = im_gt.astype(np.uint8)
+                # xr = target_size / w
+                # yr = target_size / h
+                # dets_ = dets.copy()
+                # for b in dets_:
+                #     b[0] *= xr
+                #     b[2] *= xr
+                #     b[1] *= yr
+                #     b[3] *= yr
+                #     if b[4] < args.vis_thres:
+                #         continue
+                #     text = "ship: {:.4f}".format(b[4])
+                #     b = list(map(int, b))
+                #     cv2.rectangle(im_gt, (b[0], b[1]), (b[2], b[3]), (0, 0, 255), 2)
+                #     cx = b[0]
+                #     cy = b[1] - 3
+                #     cv2.putText(im_gt, text, (cx, cy),
+                #                 cv2.FONT_HERSHEY_DUPLEX, 1.5, (0, 255, 0))
+
+                # cv2.imshow('res', im_gt)
+                # cv2.waitKey(0)
+                name = 'gt_im'
+                # name = 'pred_im'
+                # name = 'ori_im'
+                save_gt_dir = os.path.join(save_folder, name)
+                if not os.path.exists(save_gt_dir):
+                    os.mkdir(save_gt_dir)
+                cv2.imwrite(save_gt_dir + f'/{i}_{name}.png',im_gt, [int(cv2.IMWRITE_PNG_COMPRESSION), 0])
 
         # fw.close()
 
