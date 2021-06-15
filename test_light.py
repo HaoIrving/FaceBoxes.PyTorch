@@ -217,12 +217,12 @@ if __name__ == '__main__':
     start_epoch = 200; step = 5; end_epoch = args.eepoch
     ToBeTested = []
     # ToBeTested = [prefix + f'/FaceBoxes_epoch_{epoch}.pth' for epoch in range(start_epoch, 300, step)]
-    if end_epoch == 'final':
-        ToBeTested.append(prefix + '/Final_FaceBoxes.pth') # 68.5
-    else:
-        ToBeTested.append(prefix + f'/FaceBoxes_epoch_{end_epoch}.pth') # 68.5
-    # ToBeTested = [prefix + f'FaceBoxes_epoch_{epoch}.pth' for epoch in range(start_epoch, 300, step)]
-    # ToBeTested.append(prefix + 'Final_FaceBoxes.pth') # 68.5
+    # if end_epoch == 'final':
+    #     ToBeTested.append(prefix + '/Final_FaceBoxes.pth') # 68.5
+    # else:
+    #     ToBeTested.append(prefix + f'/FaceBoxes_epoch_{end_epoch}.pth') # 68.5
+    ToBeTested = [prefix + f'FaceBoxes_epoch_{epoch}.pth' for epoch in range(start_epoch, 300, step)]
+    ToBeTested.append(prefix + 'Final_FaceBoxes.pth') # 68.5
     # ToBeTested.append(prefix + 'Final_FaceBoxes.pth') # 68.5
     # ToBeTested *= 5
     for index, model_path in enumerate(ToBeTested):

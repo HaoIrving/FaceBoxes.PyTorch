@@ -56,13 +56,15 @@
 # CUDA_VISIBLE_DEVICES=2  python test_light.py --prefix weights/lr_1e3_3ach_xception3_mbv2  -mb
 # CUDA_VISIBLE_DEVICES=2  python test_light.py --prefix weights/lr_1e3_3ach_xception3_mbv2  -mb --cpu --eepoch 250
 
-# python train_light.py --lr 1e-3 --ngpu 4 --num_workers 12 -b 32 --save_folder ./weights/lr_1e3_3ach_xception3_mbv1/  -mbv1
-# CUDA_VISIBLE_DEVICES=2  python test_light.py --prefix weights/lr_1e3_3ach_xception3_mbv1  -mbv1
+python train_light.py --lr 1e-3 --ngpu 4 --num_workers 12 -b 32 --save_folder ./weights/lr_1e3_3ach_xception3_mbv1/  -mbv1
+CUDA_VISIBLE_DEVICES=2,3 python train_light.py --lr 1e-3 --ngpu 2 --num_workers 12 -b 32 --save_folder ./weights/lr_1e3_3ach_xception3_mbv1/  -mbv1
+CUDA_VISIBLE_DEVICES=2  python test_light.py --prefix weights/lr_1e3_3ach_xception3_mbv1  -mbv1
 # CUDA_VISIBLE_DEVICES=2  python test_light.py --prefix weights/lr_1e3_3ach_xception3_mbv1  -mbv1 --cpu --eepoch 285
 
-# CUDA_VISIBLE_DEVICES=2,3  python train_light.py --lr 1e-3 --ngpu 2 --num_workers 12 -b 32 --save_folder ./weights/lr_1e3_3ach_xception3_shfv2/  -shf
+CUDA_VISIBLE_DEVICES=1  python train_light.py --lr 1e-3 --ngpu 1 --num_workers 12 -b 32 --save_folder ./weights/lr_1e3_3ach_xception3_shfv2/  -shf
+CUDA_VISIBLE_DEVICES=1  python test_light.py --prefix weights/lr_1e3_3ach_xception3_shfv2  -shf
+
 # python train_light.py --lr 1e-3 --ngpu 4 --num_workers 12 -b 32 --save_folder ./weights/lr_1e3_3ach_xception3_shfv2/  -shf
-# CUDA_VISIBLE_DEVICES=2  python test_light.py --prefix weights/lr_1e3_3ach_xception3_shfv2  -shf
 # CUDA_VISIBLE_DEVICES=2  python test_light.py --prefix weights/lr_1e3_3ach_xception3_shfv2  -shf  --cpu --eepoch final
 
 ######### dsc + light ###########
